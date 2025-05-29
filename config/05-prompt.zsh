@@ -38,11 +38,15 @@ git_prompt_info() {
 
 # Enhanced Firebase detection with caching
 prompt_firebase() {
-    local cache_file="/tmp/.firebase_cache_$(pwd | tr '/' '_')"
+    # Use user-specific cache directory to avoid permission issues
+    local cache_dir="${XDG_RUNTIME_DIR:-/tmp}/firebase_cache_$USER"
+    [[ ! -d "$cache_dir" ]] && mkdir -p "$cache_dir"
+    
+    local cache_file="$cache_dir/firebase_cache_$(pwd | tr '/' '_')"
     local current_dir=$(pwd)
     
     # Use cache if recent (5 minutes)
-    if [[ -f $cache_file && $cache_file -nt $current_dir && $(($(date +%s) - $(stat -c %Y $cache_file))) -lt 300 ]]; then
+    if [[ -f $cache_file && $cache_file -nt $current_dir && $(($(date +%s) - $(stat -c %Y $cache_file 2>/dev/null || echo 0))) -lt 300 ]]; then
         cat "$cache_file" 2>/dev/null
         return
     fi
@@ -54,10 +58,10 @@ prompt_firebase() {
     fi
     
     if [[ -n $fb_project ]]; then
-        echo " %F{yellow}[$fb_project]%f" > "$cache_file"
+        echo " %F{yellow}[$fb_project]%f" > "$cache_file" 2>/dev/null
         echo " %F{yellow}[$fb_project]%f"
     else
-        echo "" > "$cache_file"
+        echo "" > "$cache_file" 2>/dev/null
     fi
 }
 

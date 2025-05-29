@@ -6,6 +6,93 @@
 export EDITOR="vim"
 export VISUAL="vim"
 
+# Install Nord colorscheme for Vim (official version from GitHub)
+install_nord_colorscheme() {
+    local is_system_install="${1:-false}"
+    local user_colors_dir="$HOME/.vim/colors"
+    local system_colors_dir="/etc/vim/colors"
+    
+    # Create colors directories
+    if [[ "$is_system_install" == true ]]; then
+        sudo mkdir -p "$system_colors_dir"
+        [[ ! -d "$user_colors_dir" ]] && mkdir -p "$user_colors_dir"
+    else
+        mkdir -p "$user_colors_dir"
+    fi
+    
+    # Download official Nord theme from GitHub
+    local nord_url="https://raw.githubusercontent.com/nordtheme/vim/main/colors/nord.vim"
+    local temp_file="/tmp/nord_vim_theme.vim"
+    
+    echo "Downloading official Nord theme from GitHub..."
+    if command -v curl >/dev/null 2>&1; then
+        if curl -fsSL "$nord_url" -o "$temp_file"; then
+            # Install for user
+            cp "$temp_file" "$user_colors_dir/nord.vim"
+            echo "Nord colorscheme installed for user"
+            
+            # Install system-wide if requested
+            if [[ "$is_system_install" == true ]]; then
+                sudo cp "$temp_file" "$system_colors_dir/nord.vim"
+                echo "Nord colorscheme installed system-wide"
+            fi
+            
+            rm -f "$temp_file"
+        else
+            echo "Warning: Failed to download Nord theme, using fallback"
+            # Fallback: create a minimal nord-like theme
+            create_fallback_nord_theme "$is_system_install"
+        fi
+    elif command -v wget >/dev/null 2>&1; then
+        if wget -q "$nord_url" -O "$temp_file"; then
+            cp "$temp_file" "$user_colors_dir/nord.vim"
+            echo "Nord colorscheme installed for user"
+            
+            if [[ "$is_system_install" == true ]]; then
+                sudo cp "$temp_file" "$system_colors_dir/nord.vim"
+                echo "Nord colorscheme installed system-wide"
+            fi
+            
+            rm -f "$temp_file"
+        else
+            echo "Warning: Failed to download Nord theme, using fallback"
+            create_fallback_nord_theme "$is_system_install"
+        fi
+    else
+        echo "Warning: Neither curl nor wget available, using fallback"
+        create_fallback_nord_theme "$is_system_install"
+    fi
+}
+
+# Fallback function to create a basic Nord-like theme
+create_fallback_nord_theme() {
+    local is_system_install="${1:-false}"
+    local user_colors_dir="$HOME/.vim/colors"
+    local system_colors_dir="/etc/vim/colors"
+    
+    local fallback_nord='" Fallback Nord theme for Vim
+set background=dark
+hi clear
+if exists("syntax_on") | syntax reset | endif
+let g:colors_name = "nord"
+
+hi Normal       ctermfg=252 ctermbg=233 guifg=#D8DEE9 guibg=#2E3440
+hi CursorLine   ctermbg=234 guibg=#3B4252 cterm=NONE gui=NONE
+hi LineNr       ctermfg=238 guifg=#4C566A
+hi Visual       ctermbg=236 guibg=#434C5E
+hi Comment      ctermfg=238 guifg=#4C566A cterm=italic gui=italic
+hi Constant     ctermfg=4   guifg=#81A1C1
+hi String       ctermfg=2   guifg=#A3BE8C
+hi Function     ctermfg=6   guifg=#88C0D0
+hi Statement    ctermfg=4   guifg=#81A1C1
+hi Type         ctermfg=4   guifg=#81A1C1'
+
+    echo "$fallback_nord" > "$user_colors_dir/nord.vim"
+    if [[ "$is_system_install" == true ]]; then
+        echo "$fallback_nord" | sudo tee "$system_colors_dir/nord.vim" > /dev/null
+    fi
+}
+
 # Create modern vim configuration with system clipboard support
 setup_vim_config() {
     local vim_config
@@ -23,6 +110,9 @@ setup_vim_config() {
     if [[ "$is_system_install" == true ]]; then
         [[ ! -d "/etc/vim" ]] && sudo mkdir -p "/etc/vim"
     fi
+    
+    # Install Nord colorscheme
+    install_nord_colorscheme "$is_system_install"
     
     # Create the config file
     local config_content='" =============================================================================
@@ -69,10 +159,10 @@ if has('\''mouse_sgr'\'')
 endif
 
 " Modern key mappings
-" Ctrl+C for copy (visual mode)
-vnoremap <C-c> "+y
-" Ctrl+X for cut (visual mode)
-vnoremap <C-x> "+d
+" Ctrl+C for copy and exit visual mode
+vnoremap <C-c> "+y<Esc>
+" Ctrl+X for cut and exit visual mode
+vnoremap <C-x> "+d<Esc>
 " Ctrl+V for paste (insert and normal mode)
 inoremap <C-v> <C-r>+
 nnoremap <C-v> "+p
@@ -97,6 +187,14 @@ set statusline=%F%m%r%h%w\ [FORMAT=%{&ff}]\ [TYPE=%Y]\ [POS=%l,%v][%p%%]\ [BUFFE
 
 " Color scheme improvements
 if &t_Co > 2 || has("gui_running")
+    try
+        colorscheme nord
+        set background=dark
+    catch
+        colorscheme default
+        set background=dark
+    endtry
+else
     colorscheme default
     set background=dark
 endif
@@ -105,14 +203,16 @@ endif
 set lazyredraw
 set ttyfast'
 
-    # Write configuration
-    if [[ "$is_system_install" == true ]]; then
-        echo "$config_content" | sudo tee "$vim_config" > /dev/null
-        sudo chmod 644 "$vim_config"
-        echo "System-wide vim configuration created at: $vim_config"
-    else
-        echo "$config_content" > "$vim_config"
-        echo "User vim configuration created at: $vim_config"
+    # Write configuration only if it doesn't exist
+    if [[ ! -f "$vim_config" ]]; then
+        if [[ "$is_system_install" == true ]]; then
+            echo "$config_content" | sudo tee "$vim_config" > /dev/null
+            sudo chmod 644 "$vim_config"
+            echo "System-wide vim configuration created at: $vim_config"
+        else
+            echo "$config_content" > "$vim_config"
+            echo "User vim configuration created at: $vim_config"
+        fi
     fi
 
     # Setup VIMINIT for the current session
@@ -208,8 +308,11 @@ export VISUAL="vim"'
     echo "Root user vim configuration completed"
 }
 
+# Enhanced aliases with Nord theme support
+alias vi='vim -u ~/.vimrc.modern 2>/dev/null || vim -u /etc/vim/vimrc.modern 2>/dev/null || vim'
+alias vim.nord='vim -u ~/.vimrc.modern || vim -u /etc/vim/vimrc.modern'
+
 # Vim aliases and functions
-alias vi='vim'
 alias vim.modern='vim -u ~/.vimrc.modern || vim -u /etc/vim/vimrc.modern'
 
 # Function to edit with modern vim
@@ -279,19 +382,22 @@ vim_help() {
 Commands:
   vedit <file>             - Edit file with modern vim config
   vim.modern               - Launch vim with modern config
+  vim.nord                 - Launch vim with Nord theme
   vim_install_system       - Install config system-wide (requires sudo)
   setup_root_vim_config    - Setup vim config for root user
   vim_clipboard_setup      - Setup clipboard utilities
+  install_nord_colorscheme - Install Nord colorscheme
   vim_help                 - Show this help
 
 Modern vim features enabled:
-  • Ctrl+C - Copy (visual mode)
-  • Ctrl+X - Cut (visual mode)  
+  • Ctrl+C - Copy and exit visual mode
+  • Ctrl+X - Cut and exit visual mode  
   • Ctrl+V - Paste (insert/normal mode)
   • Ctrl+A - Select all
   • Mouse selection and scrolling
   • System clipboard integration
   • Line numbers and syntax highlighting
+  • Official Nord color theme from GitHub (v0.19.0+)
 
 Installation modes:
   • User mode: ~/.vimrc.modern (default)

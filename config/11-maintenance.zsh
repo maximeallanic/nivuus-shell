@@ -37,6 +37,7 @@ smart_maintenance() {
     
     # Clean temporary files
     rm -f /tmp/.firebase_cache_* 2>/dev/null
+    rm -rf "${XDG_RUNTIME_DIR:-/tmp}/firebase_cache_$USER" 2>/dev/null
     rm -f /tmp/.env_backup_* 2>/dev/null
     
     # Rebuild completion if old
@@ -76,6 +77,7 @@ zsh_cleanup() {
     # Clean temporary files
     echo "🧽 Cleaning temporary files..."
     rm -f /tmp/.firebase_cache_* 2>/dev/null
+    rm -rf "${XDG_RUNTIME_DIR:-/tmp}/firebase_cache_$USER" 2>/dev/null
     rm -f /tmp/.env_backup_* 2>/dev/null
     echo "✅ Temporary files cleaned"
     
