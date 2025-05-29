@@ -1,0 +1,159 @@
+name: Test ZSH Configuration
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ubuntu-version: ["20.04", "22.04", "24.04"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Ubuntu environment
+        run: |
+          sudo apt update
+          sudo apt install -y zsh git curl wget shellcheck
+
+      - name: Install modern CLI tools
+        run: |
+          # Install eza
+          wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list
+          sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list
+          sudo apt update
+          sudo apt install -y eza bat fd-find ripgrep
+
+      - name: Run syntax tests
+        run: |
+          # Test main .zshrc
+          zsh -n .zshrc
+
+          # Test all modules
+          for file in config/*.zsh; do
+            echo "Testing $file..."
+            zsh -n "$file"
+          done
+
+      - name: Run shellcheck
+        run: |
+          shellcheck install.sh uninstall.sh test.sh
+
+          # Check ZSH files as bash scripts for compatibility
+          for file in config/*.zsh; do
+            shellcheck -s bash "$file" || echo "Warning: $file has shellcheck issues"
+          done
+
+      - name: Test file structure
+        run: |
+          # Check required files exist
+          test -f .zshrc
+          test -f install.sh
+          test -f uninstall.sh
+          test -f README.md
+          test -f Makefile
+          test -d config/
+
+          # Check modules exist
+          for module in 01-performance.zsh 02-history.zsh 03-completion.zsh 04-keybindings.zsh 05-prompt.zsh 06-aliases.zsh 07-functions.zsh 08-ai-integration.zsh 09-syntax-highlighting.zsh 10-environment.zsh 11-maintenance.zsh; do
+            test -f "config/$module"
+          done
+
+      - name: Test file sizes
+        run: |
+          # Check that no module exceeds 200 lines
+          for file in config/*.zsh; do
+            lines=$(wc -l < "$file")
+            if [ "$lines" -gt 200 ]; then
+              echo "ERROR: $file has $lines lines (exceeds 200 line limit)"
+              exit 1
+            fi
+            echo "$file: $lines lines (OK)"
+          done
+
+      - name: Test installation script
+        run: |
+          # Test install script syntax
+          bash -n install.sh
+
+          # Test that script has required functions
+          grep -q "check_system()" install.sh
+          grep -q "install_packages()" install.sh
+          grep -q "setup_zsh()" install.sh
+
+      - name: Run comprehensive test suite
+        run: |
+          chmod +x test.sh
+          ./test.sh
+
+      - name: Test ZSH startup performance
+        run: |
+          # Install ZSH plugins for testing
+          mkdir -p ~/.oh-my-zsh/custom/plugins
+
+          # Install syntax highlighting
+          git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
+
+          # Install autosuggestions
+          git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+
+          # Copy config to test location
+          mkdir -p ~/.config/zsh-ultra
+          cp -r config ~/.config/zsh-ultra/
+          cp .zshrc ~/.zshrc
+
+          # Test startup time (5 runs)
+          echo "Testing ZSH startup performance..."
+          for i in {1..5}; do
+            time_output=$(time zsh -i -c 'exit' 2>&1)
+            echo "Run $i: $time_output"
+          done
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt update && sudo apt install -y shellcheck
+
+      - name: Lint shell scripts
+        run: |
+          shellcheck --version
+          shellcheck install.sh uninstall.sh test.sh
+
+      - name: Check ZSH modules
+        run: |
+          for file in config/*.zsh; do
+            echo "Checking $file..."
+            shellcheck -s bash "$file" || echo "Warning: $file has issues"
+          done
+
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for secrets
+        run: |
+          # Simple check for potential secrets in code
+          if grep -r -i "password\|secret\|key\|token" --include="*.sh" --include="*.zsh" .; then
+            echo "WARNING: Potential secrets found in code"
+            exit 1
+          fi
+
+      - name: Check script permissions
+        run: |
+          # Ensure scripts are not world-writable
+          find . -name "*.sh" -perm -002 -exec echo "ERROR: {} is world-writable" \; -exec exit 1 \;

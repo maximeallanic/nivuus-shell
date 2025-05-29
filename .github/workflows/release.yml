@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup environment
+        run: |
+          sudo apt update
+          sudo apt install -y zsh shellcheck
+
+      - name: Run tests before release
+        run: |
+          chmod +x test.sh
+          ./test.sh
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Simple changelog generation
+          echo "## Changes" > changelog.md
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> changelog.md
+
+          # Add performance metrics
+          echo "" >> changelog.md
+          echo "## Performance" >> changelog.md
+          echo "- Target startup time: < 300ms" >> changelog.md
+          echo "- Modular design: 11 focused modules" >> changelog.md
+          echo "- File size limit: < 200 lines per module" >> changelog.md
+
+      - name: Create release archive
+        run: |
+          # Create installation package
+          tar -czf zsh-ultra-performance-${{ github.ref_name }}.tar.gz \
+            .zshrc \
+            config/ \
+            install.sh \
+            uninstall.sh \
+            README.md \
+            Makefile \
+            .config
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ZSH Ultra Performance Config ${{ github.ref_name }}
+          body_path: changelog.md
+          draft: false
+          prerelease: false
+
+      - name: Upload release archive
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./zsh-ultra-performance-${{ github.ref_name }}.tar.gz
+          asset_name: zsh-ultra-performance-${{ github.ref_name }}.tar.gz
+          asset_content_type: application/gzip
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: release
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Dockerfile for testing
+        run: |
+          cat > Dockerfile << 'EOF'
+          FROM ubuntu:22.04
+
+          # Install dependencies
+          RUN apt-get update && apt-get install -y \
+              zsh \
+              git \
+              curl \
+              wget \
+              build-essential \
+              && rm -rf /var/lib/apt/lists/*
+
+          # Create test user
+          RUN useradd -m -s /bin/zsh testuser
+
+          # Copy configuration
+          COPY . /home/testuser/zsh-config/
+          RUN chown -R testuser:testuser /home/testuser/zsh-config/
+
+          # Switch to test user
+          USER testuser
+          WORKDIR /home/testuser/zsh-config
+
+          # Install configuration
+          RUN chmod +x install.sh && ./install.sh --non-interactive
+
+          # Test startup
+          RUN zsh -i -c 'echo "ZSH Ultra Performance Config installed successfully!"'
+
+          CMD ["zsh"]
+          EOF
+
+      - name: Build Docker image
+        run: |
+          docker build -t zsh-ultra-performance:${{ github.ref_name }} .
+          docker build -t zsh-ultra-performance:latest .
+
+      - name: Test Docker image
+        run: |
+          docker run --rm zsh-ultra-performance:${{ github.ref_name }} zsh -c 'echo "Docker test passed!"'
