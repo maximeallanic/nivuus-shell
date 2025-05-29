@@ -1,52 +1,54 @@
 #!/bin/bash
-
-# Docker Test Script for ZSH Ultra Performance
-# Tests installation in clean Debian/Ubuntu environments
+# ZSH Ultra Performance Config - Docker Test
+# Test the installation in a clean Debian environment
 
 set -euo pipefail
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Build test image
+docker build -t zsh-ultra-test -f- . << 'EOF'
+FROM debian:bookworm-slim
 
-# Configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEST_IMAGES=("debian:bullseye" "debian:bookworm" "ubuntu:20.04" "ubuntu:22.04" "ubuntu:latest")
-CONTAINER_PREFIX="zsh-test"
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    zsh \
+    git \
+    curl \
+    wget \
+    sudo \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Functions
-log() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
-}
+# Create test user
+RUN useradd -m -s /bin/bash testuser && \
+    echo "testuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/testuser
 
-success() {
-    echo -e "${GREEN}✓${NC} $1"
-}
+# Copy configuration
+COPY . /home/testuser/zsh-config/
+RUN chown -R testuser:testuser /home/testuser/zsh-config/
 
-error() {
-    echo -e "${RED}✗${NC} $1"
-}
+# Switch to test user
+USER testuser
+WORKDIR /home/testuser/zsh-config
 
-warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
-}
+# Set up ZSH as default shell for user
+RUN sudo chsh -s /bin/zsh testuser
 
-cleanup_containers() {
-    log "Cleaning up test containers..."
-    for image in "${TEST_IMAGES[@]}"; do
-        container_name="${CONTAINER_PREFIX}-$(echo "$image" | tr ':/' '-')"
-        if docker ps -a --format "table {{.Names}}" | grep -q "^${container_name}$"; then
-            docker rm -f "$container_name" >/dev/null 2>&1 || true
-        fi
-    done
-}
+CMD ["/bin/bash"]
+EOF
 
-test_image() {
-    local image="$1"
-    local container_name="${CONTAINER_PREFIX}-$(echo "$image" | tr ':/' '-')"
+echo "🐳 Docker test image built successfully!"
+echo ""
+echo "To test the installation:"
+echo "  docker run -it zsh-ultra-test"
+echo ""
+echo "Inside the container, run:"
+echo "  ./install.sh"
+echo "  zsh"
+echo "  zsh_health_check"
+echo ""
+echo "To clean up:"
+echo "  docker rmi zsh-ultra-test"
+NTAINER_PREFIX}-$(echo "$image" | tr ':/' '-')"
     
     log "Testing installation on $image..."
     

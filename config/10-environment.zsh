@@ -82,20 +82,20 @@ load_env() {
     local backup_file="/tmp/.env_backup_$$"
     env | grep -E "^($(IFS='|'; echo "${SAFE_ENV_VARS[*]}"))" > "$backup_file" 2>/dev/null
     
-    echo "📦 Loading $env_file..."
+    # Silent loading for better startup performance
     set -o allexport
     source "$env_file"
     set +o allexport
     
     # Store backup location
     export _ENV_BACKUP_FILE="$backup_file"
-    echo "✅ Environment loaded (backup: $backup_file)"
+    # Silent loading - use 'envshow' to see loaded variables
 }
 
 # Smart env unloading
 unload_env() {
     if [[ -n "$_PREV_ENV_FILE" && -f "$_PREV_ENV_FILE" ]]; then
-        echo "🔄 Unloading previous environment..."
+        # Silent unloading for better performance
         
         while IFS= read -r line; do
             if [[ $line == *"="* && ! $line == "#"* ]]; then
@@ -105,7 +105,7 @@ unload_env() {
         done < "$_PREV_ENV_FILE"
         
         unset _PREV_ENV_FILE
-        echo "✅ Environment unloaded"
+        # Silent unload - use 'envshow' to check current state
     fi
 }
 

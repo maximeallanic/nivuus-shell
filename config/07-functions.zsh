@@ -74,13 +74,6 @@ detect_project() {
 smart_cd() {
     builtin cd "$@"
     
-    # Show directory contents intelligently
-    if command -v eza &> /dev/null; then
-        eza --icons --group-directories-first -x
-    else
-        ls -CF
-    fi
-    
     # Detect project type
     detect_project
 }

@@ -31,7 +31,7 @@ smart_maintenance() {
         local removed=$((original_size - new_size))
         
         if (( removed > 0 )); then
-            echo "✅ Removed $removed duplicate entries"
+            # Silent removal - no echo for startup performance
         fi
     fi
     
@@ -67,9 +67,9 @@ zsh_cleanup() {
         local removed=$((original_size - new_size))
         
         if (( removed > 0 )); then
-            echo "✅ Removed $removed duplicate entries"
+            # Silent removal - logged for manual cleanup only
         else
-            echo "✅ No duplicates found"
+            # Silent - no duplicates found
         fi
     fi
     

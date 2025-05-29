@@ -4,11 +4,11 @@
 
 # Modern replacements for classic tools
 if command -v eza &> /dev/null; then
-    alias ls='eza --icons --group-directories-first'
-    alias ll='eza -la --icons --group-directories-first --git'
-    alias la='eza -a --icons --group-directories-first'
-    alias l='eza -l --icons --group-directories-first'
-    alias tree='eza --tree --icons'
+    alias ls='eza --group-directories-first'
+    alias ll='eza -la --group-directories-first --git'
+    alias la='eza -a --group-directories-first'
+    alias l='eza -l --group-directories-first'
+    alias tree='eza --tree'
 else
     alias ll='ls -alF'
     alias la='ls -A'

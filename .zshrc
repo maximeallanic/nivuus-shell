@@ -20,21 +20,8 @@ done
 [ -f ~/.aliases ] && source ~/.aliases
 
 # =============================================================================
-# EXTERNAL INTEGRATIONS
-# =============================================================================
-
-# Atuin shell history (if available)
-if [[ -f "$HOME/.atuin/bin/env" ]]; then
-    . "$HOME/.atuin/bin/env"
-    eval "$(atuin init zsh)"
-fi
-
-# =============================================================================
 # WELCOME MESSAGE
 # =============================================================================
 
-# Show welcome message only for interactive shells
-if [[ $- == *i* ]]; then
-    echo "🚀 Modern ZSH Configuration loaded successfully!"
-    echo "   Run 'aihelp' for AI commands or 'sysinfo' for system information"
-fi
+# Welcome message disabled for silent startup
+# Use 'zsh_info' command to see configuration details
