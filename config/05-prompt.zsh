@@ -30,7 +30,7 @@ git_prompt_info() {
             dirty="%{$reset_color%}%{$fg_bold[blue]%})%{$reset_color%}"
         fi
         
-        git_info=" git:(%{$fg[red]%}$branch$dirty"
+        git_info=" %{$fg_bold[blue]%}git:(%{$fg[red]%}$branch$dirty"
     fi
     
     echo "$git_info"
