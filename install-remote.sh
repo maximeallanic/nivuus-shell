@@ -67,8 +67,24 @@ download_repository() {
         rm -rf "$TEMP_DIR"
     fi
     
-    # Clone the repository
-    git clone --depth 1 "$REPO_URL" "$TEMP_DIR"
+    # Configure git to avoid credential prompts for this session
+    export GIT_TERMINAL_PROMPT=0
+    
+    # Clone the repository with explicit HTTPS URL
+    git clone --depth 1 --no-single-branch "https://github.com/maximeallanic/zshrc.git" "$TEMP_DIR" 2>/dev/null || {
+        print_error "Failed to download repository. Trying alternative method..."
+        
+        # Try with curl as fallback
+        mkdir -p "$TEMP_DIR"
+        cd "$TEMP_DIR"
+        
+        curl -fsSL "https://github.com/maximeallanic/zshrc/archive/refs/heads/master.tar.gz" | tar -xz --strip-components=1
+        
+        if [[ ! -f "install.sh" ]]; then
+            print_error "Failed to download repository using fallback method"
+            exit 1
+        fi
+    }
     
     if [[ ! -d "$TEMP_DIR" ]]; then
         print_error "Failed to download repository"
