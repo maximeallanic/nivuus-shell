@@ -2,22 +2,22 @@
 # MODERN FAST ALIASES & TOOLS
 # =============================================================================
 
-# Modern replacements for classic tools
+# Modern replacements with subtle colors
 if command -v eza &> /dev/null; then
-    alias ls='eza --group-directories-first'
-    alias ll='eza -la --group-directories-first --git'
-    alias la='eza -a --group-directories-first'
-    alias l='eza -l --group-directories-first'
-    alias tree='eza --tree'
+    alias ls='eza --group-directories-first --color=auto'
+    alias ll='eza -la --group-directories-first --color=auto --git'
+    alias la='eza -a --group-directories-first --color=auto'
+    alias l='eza -l --group-directories-first --color=auto'
+    alias tree='eza --tree --color=auto'
 else
-    alias ll='ls -alF'
-    alias la='ls -A'
-    alias l='ls -CF'
+    alias ll='ls -alF --color=auto'
+    alias la='ls -A --color=auto'
+    alias l='ls -CF --color=auto'
 fi
 
 if command -v bat &> /dev/null; then
-    alias cat='bat --paging=never'
-    alias cath='bat'  # cat with header/line numbers
+    alias cat='bat --paging=never --style=plain'
+    alias cath='bat --style=header,grid'  # cat with header/line numbers
 fi
 
 if command -v fd &> /dev/null; then

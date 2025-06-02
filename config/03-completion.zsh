@@ -37,28 +37,28 @@ fi
 # Case insensitive completion with smart matching
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
 
-# Enhanced completion settings with colors
+# Simplified completion settings with minimal colors
 zstyle ':completion:*' menu select
-zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
-zstyle ':completion:*:descriptions' format '%B%F{green}-- %d --%f%b'
-zstyle ':completion:*:messages' format '%B%F{purple}-- %d --%f%b'
-zstyle ':completion:*:warnings' format '%B%F{red}-- No matches found --%f%b'
-zstyle ':completion:*:corrections' format '%B%F{yellow}-- %d (errors: %e) --%f%b'
+zstyle ':completion:*' list-colors 'di=34:ln=35:so=32:pi=33:ex=31:bd=34;46:cd=34;43:su=30;41:sg=30;46:tw=30;42:ow=30;43'
+zstyle ':completion:*:descriptions' format '%F{blue}-- %d --%f'
+zstyle ':completion:*:messages' format '%F{blue}-- %d --%f'
+zstyle ':completion:*:warnings' format '%F{red}-- No matches found --%f'
+zstyle ':completion:*:corrections' format '%F{blue}-- %d (errors: %e) --%f'
 zstyle ':completion:*' squeeze-slashes true
 
 # Completion caching for performance
 zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path ~/.zsh/cache
 
-# Advanced completion behaviors
+# Simplified completion behaviors
 zstyle ':completion:*' rehash true                              # Auto-rehash commands
 zstyle ':completion:*' insert-tab pending                       # Insert tab when completing
 zstyle ':completion:*' expand 'yes'                            # Expand globs
 zstyle ':completion:*' substitute 'yes'                        # Substitute variables
-zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}  # Colored file listings
+zstyle ':completion:*:default' list-colors 'di=34:ln=35:ex=31' # Minimal file colors
 
-# Process completion
-zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#) ([0-9a-z-]#)*=01;34=0=01'
+# Process completion with minimal colors
+zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=34=0'
 zstyle ':completion:*:*:*:*:processes' command "ps -u $USER -o pid,user,comm -w -w"
 
 # SSH/SCP/RSYNC completion

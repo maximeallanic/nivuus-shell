@@ -1,5 +1,8 @@
 # Load modern shell configuration
 if [[ -d "/opt/modern-shell" ]]; then
     export ZSH_CONFIG_DIR="/opt/modern-shell"
-    source "$ZSH_CONFIG_DIR/zshrc.template"
+    # Load all configuration files
+    for config_file in "$ZSH_CONFIG_DIR"/config/*.zsh; do
+        [[ -r "$config_file" ]] && source "$config_file"
+    done
 fi

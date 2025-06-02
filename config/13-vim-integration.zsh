@@ -12,6 +12,16 @@ install_nord_colorscheme() {
     local user_colors_dir="$HOME/.vim/colors"
     local system_colors_dir="/etc/vim/colors"
     
+    # Check if Nord theme already exists
+    local nord_file="$user_colors_dir/nord.vim"
+    if [[ "$is_system_install" == true ]]; then
+        nord_file="$system_colors_dir/nord.vim"
+    fi
+    
+    if [[ -f "$nord_file" ]]; then
+        return 0  # Already installed, skip download
+    fi
+    
     # Create colors directories
     if [[ "$is_system_install" == true ]]; then
         sudo mkdir -p "$system_colors_dir"
@@ -129,7 +139,7 @@ set fileencodings=ucs-bom,utf-8,latin1
 " Visual and behavior
 syntax on
 set number
-set relativenumber
+set norelativenumber
 set ruler
 set cursorline
 set showmatch
@@ -152,11 +162,15 @@ if has('\''clipboard'\'')
     set clipboard=unnamed,unnamedplus
 endif
 
-" Mouse support
+" Mouse support - allows selection without entering visual mode
 set mouse=a
 if has('\''mouse_sgr'\'')
     set ttymouse=sgr
 endif
+
+" Disable visual mode on mouse selection for SSH compatibility
+set selectmode=mouse
+set keymodel=startsel
 
 " Modern key mappings
 " Ctrl+C for copy and exit visual mode
@@ -309,11 +323,17 @@ export VISUAL="vim"'
 }
 
 # Enhanced aliases with Nord theme support
-alias vi='vim -u ~/.vimrc.modern 2>/dev/null || vim -u /etc/vim/vimrc.modern 2>/dev/null || vim'
-alias vim.nord='vim -u ~/.vimrc.modern || vim -u /etc/vim/vimrc.modern'
+alias vi='smart_vim'
+alias vim='smart_vim'
+alias vim.nord='command vim -u ~/.vimrc.modern || command vim -u /etc/vim/vimrc.modern'
 
 # Vim aliases and functions
-alias vim.modern='vim -u ~/.vimrc.modern || vim -u /etc/vim/vimrc.modern'
+alias vim.modern='command vim -u ~/.vimrc.modern || command vim -u /etc/vim/vimrc.modern'
+
+# Aliases for SSH-optimized vim
+alias vim.ssh='command vim -u ~/.vimrc.ssh 2>/dev/null || command vim -u /etc/vim/vimrc.ssh 2>/dev/null || command vim'
+alias vssh='vim.ssh'
+alias vim-minimal='command vim -u ~/.vimrc.minimal 2>/dev/null || command vim'
 
 # Function to edit with modern vim
 vedit() {
@@ -325,11 +345,11 @@ vedit() {
     
     # Try user config first, then system config
     if [[ -f "$HOME/.vimrc.modern" ]]; then
-        vim -u "$HOME/.vimrc.modern" "$file"
+        command vim -u "$HOME/.vimrc.modern" "$file"
     elif [[ -f "/etc/vim/vimrc.modern" ]]; then
-        vim -u "/etc/vim/vimrc.modern" "$file"
+        command vim -u "/etc/vim/vimrc.modern" "$file"
     else
-        vim "$file"
+        command vim "$file"
     fi
 }
 
@@ -371,8 +391,154 @@ vim_clipboard_setup() {
     echo "Clipboard tool: ${clipboard_tool:-xclip} is available"
 }
 
-# Auto-setup on module load (user config only)
-setup_vim_config
+# Function to setup vim for SSH usage with optimal mouse support
+vim_ssh_setup() {
+    local ssh_vim_config
+    local is_system_install=false
+    
+    # Determine installation mode
+    if [[ "${1:-}" == "--system" ]] || [[ "$EUID" -eq 0 ]]; then
+        ssh_vim_config="/etc/vim/vimrc.ssh"
+        is_system_install=true
+    else
+        ssh_vim_config="$HOME/.vimrc.ssh"
+    fi
+    
+    # Create SSH-optimized vim configuration
+    local ssh_config_content='" =============================================================================
+" WEB/REMOTE-OPTIMIZED VIM CONFIGURATION
+" Simple config for vscode.dev, Chromebook, SSH - terminal handles selection
+" =============================================================================
+
+" Basic settings
+set nocompatible
+set encoding=utf-8
+syntax on
+set number
+set norelativenumber
+set ruler
+set cursorline
+
+" COMPLETELY DISABLE VIM MOUSE - let terminal handle everything
+set mouse=
+set ttymouse=
+
+" Remove all mouse mappings
+if has("mouse")
+    set mouse=
+endif
+
+" Clear any existing mouse mappings
+silent! nunmap <LeftMouse>
+silent! nunmap <LeftDrag>
+silent! nunmap <LeftRelease>
+silent! nunmap <RightMouse>
+silent! iunmap <LeftMouse>
+silent! iunmap <LeftDrag>
+silent! iunmap <LeftRelease>
+silent! iunmap <RightMouse>
+silent! vunmap <LeftMouse>
+silent! vunmap <LeftDrag>
+silent! vunmap <LeftRelease>
+silent! vunmap <RightMouse>
+
+" No selection modes that interfere with terminal
+set selectmode=
+set keymodel=
+
+" Line numbers and basic visual settings
+set number
+set showmatch
+set hlsearch
+set incsearch
+
+" Indentation
+set autoindent
+set tabstop=4
+set shiftwidth=4
+set expandtab
+
+" Status line optimized for web
+set laststatus=2
+set statusline=%F\ [%l:%c]\ %p%%\ [SHIFT+CLICK\ TO\ SELECT]
+
+" Performance for web environments
+set lazyredraw
+set ttyfast
+set timeout
+set timeoutlen=1000
+set ttimeoutlen=50
+set updatetime=300
+
+" Disable problematic features
+set noswapfile
+set nobackup
+set nowritebackup
+
+" Color scheme
+if &t_Co > 2
+    try
+        colorscheme nord
+        set background=dark
+    catch
+        colorscheme default
+        set background=dark
+    endtry
+endif'
+
+    # Write SSH configuration
+    if [[ "$is_system_install" == true ]]; then
+        echo "$ssh_config_content" | sudo tee "$ssh_vim_config" > /dev/null
+        sudo chmod 644 "$ssh_vim_config"
+        echo "SSH vim configuration created at: $ssh_vim_config"
+    else
+        echo "$ssh_config_content" > "$ssh_vim_config"
+        echo "SSH vim configuration created at: $ssh_vim_config"
+    fi
+}
+
+# Aliases for SSH-optimized vim
+alias vim.ssh='command vim -u ~/.vimrc.ssh 2>/dev/null || command vim -u /etc/vim/vimrc.ssh 2>/dev/null || command vim'
+alias vssh='vim.ssh'
+alias vim-minimal='command vim -u ~/.vimrc.minimal 2>/dev/null || command vim'
+
+# Function to detect environment and use appropriate vim config
+smart_vim() {
+    local file="$1"
+    
+    # Force web/remote config for better compatibility
+    # Check for various remote/web environments OR default to web-friendly config
+    if [[ -n "$SSH_CLIENT" ]] || [[ -n "$SSH_TTY" ]] || [[ -n "$CODESPACES" ]] || [[ -n "$GITPOD_WORKSPACE_ID" ]] || [[ "$TERM_PROGRAM" == "vscode" ]] || [[ -n "$VSCODE_IPC_HOOK_CLI" ]] || [[ "$TERM" == "xterm-256color" ]]; then
+        # We're in a remote/web environment, use terminal-friendly config
+        if [[ -f "$HOME/.vimrc.ssh" ]]; then
+            command vim -u "$HOME/.vimrc.ssh" "$file"
+        elif [[ -f "/etc/vim/vimrc.ssh" ]]; then
+            command vim -u "/etc/vim/vimrc.ssh" "$file"
+        else
+            vim_ssh_setup
+            command vim -u "$HOME/.vimrc.ssh" "$file"
+        fi
+    else
+        # Local usage, use modern config
+        if [[ -f "$HOME/.vimrc.modern" ]]; then
+            command vim -u "$HOME/.vimrc.modern" "$file"
+        elif [[ -f "/etc/vim/vimrc.modern" ]]; then
+            command vim -u "/etc/vim/vimrc.modern" "$file"
+        else
+            command vim "$file"
+        fi
+    fi
+}
+
+# Auto-setup on module load (user config only) - only if not already configured
+if [[ ! -f "$HOME/.vimrc.modern" ]] && [[ ! -f "/etc/vim/vimrc.modern" ]]; then
+    setup_vim_config
+fi
+
+# Auto-setup SSH config if needed
+if [[ ! -f "$HOME/.vimrc.ssh" ]] && [[ ! -f "/etc/vim/vimrc.ssh" ]]; then
+    vim_ssh_setup
+fi
 
 # Help function
 vim_help() {
@@ -380,33 +546,42 @@ vim_help() {
 === VIM INTEGRATION HELP ===
 
 Commands:
-  vedit <file>             - Edit file with modern vim config
+  vi/vim <file>            - Smart vim (auto-detects SSH and uses appropriate config)
+  vedit <file>             - Edit file with modern vim config (local)
+  vim.ssh <file>           - Force SSH-optimized vim config
+  vssh <file>              - Alias for vim.ssh
   vim.modern               - Launch vim with modern config
   vim.nord                 - Launch vim with Nord theme
   vim_install_system       - Install config system-wide (requires sudo)
+  vim_ssh_setup            - Setup SSH-optimized vim config
   setup_root_vim_config    - Setup vim config for root user
   vim_clipboard_setup      - Setup clipboard utilities
   install_nord_colorscheme - Install Nord colorscheme
   vim_help                 - Show this help
 
-Modern vim features enabled:
-  • Ctrl+C - Copy and exit visual mode
-  • Ctrl+X - Cut and exit visual mode  
-  • Ctrl+V - Paste (insert/normal mode)
-  • Ctrl+A - Select all
-  • Mouse selection and scrolling
+Features enabled:
+  LOCAL USAGE:
+  • Line numbers (absolute, not relative)
+  • Full mouse support with visual mode
   • System clipboard integration
-  • Line numbers and syntax highlighting
-  • Official Nord color theme from GitHub (v0.19.0+)
+  • Modern key mappings (Ctrl+C/X/V/A)
+  
+  SSH/WEB USAGE (vscode.dev, Chromebook, SSH):
+  • Line numbers displayed
+  • Mouse handling: HOLD SHIFT + click and drag to select
+  • Copy with Ctrl+C or right-click after selection
+  • Automatic detection of remote environments
+  • Terminal bypasses vim for text selection
+
+Mouse behavior in remote environments:
+  • Mouse disabled in vim - use terminal selection
+  • Click and drag to select text (works now!)
+  • Copy with Ctrl+C or right-click
+  • Works with SSH, vscode.dev, Chromebook, Codespaces
 
 Installation modes:
-  • User mode: ~/.vimrc.modern (default)
-  • System mode: /etc/vim/vimrc.modern (system-wide)
-  • Root mode: /root/.vimrc.modern (root user)
-
-System installation includes:
-  • All regular users (/home/*)
-  • Root user (/root)
-  • System-wide defaults (/etc/vim, /etc/profile)
+  • User mode: ~/.vimrc.modern & ~/.vimrc.ssh
+  • System mode: /etc/vim/vimrc.modern & /etc/vim/vimrc.ssh
+  • Root mode: /root/.vimrc.* 
 EOF
 }
