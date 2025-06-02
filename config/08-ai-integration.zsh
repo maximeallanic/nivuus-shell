@@ -10,8 +10,8 @@ if command -v gh &> /dev/null; then
     # Enhanced aliases for better workflow
     alias ai='gh copilot suggest'
     alias explain='gh copilot explain'
-    alias fix='gh copilot suggest --type shell'
-    alias gitai='gh copilot suggest --type git'
+    alias fix='gh copilot suggest -t shell'
+    alias gitai='gh copilot suggest -t git'
     
     # Quick AI command helper
     ask() {
@@ -22,7 +22,7 @@ if command -v gh &> /dev/null; then
             echo "  ask 'git command to undo last commit'"
             return 1
         fi
-        gh copilot suggest --type shell "$*"
+        gh copilot suggest -t shell "$*"
     }
     
     # AI code explanation
@@ -43,9 +43,9 @@ fi
 # GitHub Copilot shortcuts (if available)
 if command -v gh &> /dev/null; then
     # Quick AI assistance for shell commands
-    alias '??'='gh copilot suggest --type shell'
-    alias '?git'='gh copilot suggest --type git'
-    alias '?gh'='gh copilot suggest --type gh'
+    alias '??'='gh copilot suggest -t shell'
+    alias '?git'='gh copilot suggest -t git'
+    alias '?gh'='gh copilot suggest -t gh'
     
     # Interactive AI command generation
     aihelp() {
