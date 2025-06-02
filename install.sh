@@ -21,6 +21,9 @@ INSTALL_DIR="$HOME/.config/zsh-ultra"
 BACKUP_DIR="$HOME/.config/zsh-ultra-backup"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Global variables for non-interactive mode
+NON_INTERACTIVE=false
+
 # =============================================================================
 # UTILITY FUNCTIONS
 # =============================================================================
@@ -406,10 +409,15 @@ main() {
     install_zsh_plugins
     
     # Optional: Install GitHub CLI
-    read -p "$(echo -e "${YELLOW}Install GitHub CLI for AI features? (y/N): ${NC}")" -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "$NON_INTERACTIVE" == true ]]; then
+        print_step "Non-interactive mode: Installing GitHub CLI..."
         install_github_cli
+    else
+        read -p "$(echo -e "${YELLOW}Install GitHub CLI for AI features? (y/N): ${NC}")" -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            install_github_cli
+        fi
     fi
     echo
     
@@ -420,10 +428,15 @@ main() {
     echo
     
     # Set default shell
-    read -p "$(echo -e "${YELLOW}Set ZSH as default shell? (y/N): ${NC}")" -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "$NON_INTERACTIVE" == true ]]; then
+        print_step "Non-interactive mode: Setting ZSH as default shell..."
         set_default_shell
+    else
+        read -p "$(echo -e "${YELLOW}Set ZSH as default shell? (y/N): ${NC}")" -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            set_default_shell
+        fi
     fi
     echo
     
@@ -459,10 +472,15 @@ case "${1:-}" in
         echo "Usage: $0 [options]"
         echo ""
         echo "Options:"
-        echo "  --help, -h     Show this help message"
-        echo "  --uninstall    Uninstall the configuration"
+        echo "  --help, -h           Show this help message"
+        echo "  --non-interactive    Run in non-interactive mode (auto-accept all prompts)"
+        echo "  --uninstall          Uninstall the configuration"
         echo ""
         exit 0
+        ;;
+    "--non-interactive")
+        NON_INTERACTIVE=true
+        main
         ;;
     "--uninstall")
         print_header "Uninstalling Modern ZSH Configuration"
@@ -487,6 +505,6 @@ case "${1:-}" in
         exit 0
         ;;
     *)
-        main "$@"
+        main
         ;;
 esac

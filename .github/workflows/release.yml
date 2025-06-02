@@ -77,10 +77,12 @@ jobs:
               curl \
               wget \
               build-essential \
+              sudo \
               && rm -rf /var/lib/apt/lists/*
 
-          # Create test user
-          RUN useradd -m -s /bin/zsh testuser
+          # Create test user with sudo privileges
+          RUN useradd -m -s /bin/zsh testuser && \
+              echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
           # Copy configuration
           COPY . /home/testuser/zsh-config/
@@ -90,7 +92,7 @@ jobs:
           USER testuser
           WORKDIR /home/testuser/zsh-config
 
-          # Install configuration
+          # Install configuration (non-interactive to skip prompts)
           RUN chmod +x install.sh && ./install.sh --non-interactive
 
           # Test startup
