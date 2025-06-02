@@ -14,7 +14,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-REPO_URL="https://github.com/mallanic/shell.git"
+REPO_URL="https://github.com/maximeallanic/zshrc.git"
 TEMP_DIR="/tmp/modern-shell-installer-$$"
 
 # Print functions

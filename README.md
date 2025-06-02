@@ -18,10 +18,10 @@ Ultra-fast, modular, and intelligent shell environment with advanced Vim integra
 
 ```bash
 # Download and install for current user
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/zshrc/main/install-remote.sh | bash
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/zshrc/master/install-remote.sh | bash
 
 # Download and install system-wide (all users)
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/zshrc/main/install-system-remote.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/zshrc/master/install-system-remote.sh | sudo bash
 ```
 
 ### Manual Installation
