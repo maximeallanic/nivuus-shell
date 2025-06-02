@@ -47,7 +47,7 @@ jobs:
             .config
 
       - name: Create GitHub Release
-        uses: softprogs/action-gh-release@v1
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           name: ZSH Ultra Performance Config ${{ github.ref_name }}
