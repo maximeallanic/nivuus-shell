@@ -140,28 +140,27 @@ sysinfo() {
 
 # NVM lazy loading function
 load_nvm() {
+    # Skip if NVM is already loaded
+    if command -v nvm &> /dev/null; then
+        return 0
+    fi
+    
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    
+    # Auto-load default or LTS Node.js version
+    if command -v nvm &> /dev/null; then
+        # Try to use .nvmrc if present, otherwise use default or LTS
+        if [[ -f ".nvmrc" ]]; then
+            nvm use --silent 2>/dev/null || nvm use default --silent 2>/dev/null || nvm use --lts --silent 2>/dev/null
+        else
+            nvm use default --silent 2>/dev/null || nvm use --lts --silent 2>/dev/null
+        fi
+    fi
 }
 
-# Create nvm function that loads NVM on first use
-nvm() {
-    unfunction nvm
+# Load NVM if not already available
+if ! command -v npm &> /dev/null; then
     load_nvm
-    nvm "$@"
-}
-
-# Create node function that loads NVM on first use
-node() {
-    unfunction node
-    load_nvm
-    node "$@"
-}
-
-# Create npm function that loads NVM on first use
-npm() {
-    unfunction npm
-    load_nvm
-    npm "$@"
-}
+fi

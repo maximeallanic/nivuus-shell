@@ -15,9 +15,14 @@ else
     alias l='ls -CF --color=auto'
 fi
 
+# Check for bat (modern cat replacement)
 if command -v bat &> /dev/null; then
     alias cat='bat --paging=never --style=plain'
     alias cath='bat --style=header,grid'  # cat with header/line numbers
+elif command -v batcat &> /dev/null; then
+    alias cat='batcat --paging=never --style=plain'
+    alias cath='batcat --style=header,grid'  # cat with header/line numbers
+    alias bat='batcat'  # Create bat alias for consistency
 fi
 
 if command -v fd &> /dev/null; then

@@ -2,6 +2,12 @@
 # SECURE ENVIRONMENT MANAGEMENT
 # =============================================================================
 
+# Ensure ~/.local/bin is in PATH for user-installed tools
+export PATH="$HOME/.local/bin:$PATH"
+
+# Global environment validation settings
+export ENV_VALIDATION_SILENT=true  # Set to false to see validation messages
+
 # Whitelist of safe environment variables
 SAFE_ENV_VARS=(
     "NODE_ENV" "ENVIRONMENT" "NODE_OPTIONS"
@@ -12,12 +18,13 @@ SAFE_ENV_VARS=(
     "DOCKER_" "COMPOSE_"
     "OPENAI_" "USE_" "WHATSAPP_" "DISCORD_"
     "AUTHORIZED_" "TOKEN" "BOT_"
+    "FACEBOOK_" "LINKEDIN_" "ANDROID_" "OPENSSL_" "CPPFLAGS"
 )
 
 # Secure .env file validation
 validate_env_file() {
     local env_file="$1"
-    local silent_mode="${2:-true}"  # Silent by default
+    local silent_mode="${2:-$ENV_VALIDATION_SILENT}"  # Use global setting by default
     local line_num=0
     local issues=0
     
@@ -35,7 +42,7 @@ validate_env_file() {
             continue
         fi
         
-        # Skip security warnings in silent mode (startup performance)
+        # Skip security warnings in silent mode
         if [[ $silent_mode != "true" ]]; then
             # Extract variable name
             local var_name=${line%%=*}
@@ -64,22 +71,23 @@ validate_env_file() {
     return 0
 }
 
-# Enhanced .env loading with backup
+# Enhanced .env loading with backup (silent by default)
 load_env() {
     local env_file="${1:-.env}"
+    local silent="${2:-true}"  # Silent by default
     
     if [[ ! -f $env_file ]]; then
         return 0
     fi
     
     if [[ ! -r $env_file ]]; then
-        echo "⚠️  Cannot read $env_file (permission denied)"
+        [[ $silent != "true" ]] && echo "⚠️  Cannot read $env_file (permission denied)"
         return 1
     fi
     
-    # Silent validation for startup performance
-    if ! validate_env_file "$env_file" 2>/dev/null; then
-        # Silent validation failed - skip loading for startup performance
+    # Silent validation always
+    if ! validate_env_file "$env_file" true 2>/dev/null; then
+        # Silent validation failed - skip loading
         return 1
     fi
     
@@ -87,14 +95,13 @@ load_env() {
     local backup_file="/tmp/.env_backup_$$"
     env | grep -E "^($(IFS='|'; echo "${SAFE_ENV_VARS[*]}"))" > "$backup_file" 2>/dev/null
     
-    # Silent loading for better startup performance
+    # Silent loading
     set -o allexport
-    source "$env_file"
+    source "$env_file" 2>/dev/null
     set +o allexport
     
     # Store backup location
     export _ENV_BACKUP_FILE="$backup_file"
-    # Silent loading - use 'envshow' to see loaded variables
 }
 
 # Smart env unloading
@@ -114,15 +121,15 @@ unload_env() {
     fi
 }
 
-# Enhanced auto-env with security
+# Enhanced auto-env with security (silent mode)
 auto_env() {
     # Unload previous environment
     unload_env
     
-    # Load new .env if it exists
+    # Load new .env if it exists (completely silent)
     if [[ -f .env && -r .env ]]; then
         export _PREV_ENV_FILE="$(pwd)/.env"
-        load_env .env
+        load_env .env >/dev/null 2>&1
     fi
 }
 
@@ -130,18 +137,18 @@ auto_env() {
 envload() {
     local env_file="${1:-.env}"
     echo "🔍 Validating $env_file..."
-    if ! validate_env_file "$env_file"; then
+    if ! validate_env_file "$env_file" false; then  # Force verbose for manual loading
         echo "❌ Validation failed. Load anyway? (y/N)"
         read -r response
         [[ $response != [yY] ]] && return 1
     fi
-    load_env "$env_file"
+    load_env "$env_file" false  # Force verbose for manual loading
 }
 
 envcheck() {
     local env_file="${1:-.env}"
     echo "🔍 Validating $env_file..."
-    validate_env_file "$env_file"
+    validate_env_file "$env_file" false  # Force verbose for manual checking
 }
 
 envunload() {
@@ -198,3 +205,23 @@ else
     fi
 fi
 unset __conda_setup
+
+# =============================================================================
+# NODE.JS & NVM SETUP
+# =============================================================================
+
+# NVM setup with automatic loading for VS Code compatibility
+if [[ -d "$HOME/.nvm" ]]; then
+    export NVM_DIR="$HOME/.nvm"
+    
+    # Load NVM immediately (not lazy) for better VS Code integration
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    
+    # Auto-use appropriate Node version
+    if [[ -f ".nvmrc" ]]; then
+        nvm use --silent 2>/dev/null || nvm use default --silent 2>/dev/null || true
+    else
+        nvm use default --silent 2>/dev/null || true
+    fi
+fi

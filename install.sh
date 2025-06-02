@@ -213,6 +213,35 @@ install_zsh_plugins() {
     fi
 }
 
+install_nvm() {
+    print_step "Installing Node Version Manager (NVM)..."
+    
+    if [[ -d "$HOME/.nvm" ]]; then
+        echo "  ✓ NVM already installed"
+        return
+    fi
+    
+    # Download and install NVM
+    local nvm_version="v0.39.4"
+    curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${nvm_version}/install.sh" | bash
+    
+    # Source nvm immediately for verification
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    
+    # Install latest LTS Node.js
+    if command -v nvm &> /dev/null; then
+        print_step "Installing Node.js LTS..."
+        nvm install --lts
+        nvm use --lts
+        print_success "Installed Node.js LTS via NVM"
+    else
+        print_warning "NVM installation may require terminal restart"
+    fi
+    
+    print_success "NVM installed"
+}
+
 install_github_cli() {
     print_step "Installing GitHub CLI..."
     
