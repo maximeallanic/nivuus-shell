@@ -78,3 +78,17 @@ info: ## Show configuration information
 	@ls -1 config/*.zsh | sed 's/^/  - /'
 	@echo "Install script: $(INSTALL_SCRIPT)"
 	@echo "Backup directory: $(BACKUP_DIR)"
+
+# Release management
+.PHONY: release-patch release-minor release-major release-dry-run
+release-patch:
+	@./release.sh patch
+
+release-minor:
+	@./release.sh minor
+
+release-major:
+	@./release.sh major
+
+release-dry-run:
+	@./release.sh -d patch

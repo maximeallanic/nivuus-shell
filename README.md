@@ -14,15 +14,33 @@ Ultra-fast, modular, and intelligent shell environment with advanced Vim integra
 
 ## Installation
 
-### User Installation (Default)
+### Quick Install (One-line)
+
+```bash
+# Download and install for current user
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/zshrc/main/install-remote.sh | bash
+
+# Download and install system-wide (all users)
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/zshrc/main/install-system-remote.sh | sudo bash
+```
+
+### Manual Installation
+
+#### User Installation (Default)
+
 ```bash
 # Clone and install for current user
+git clone https://github.com/mallanic/shell.git
+cd shell
 ./install.sh
 ```
 
-### System-wide Installation (All Users)
+#### System-wide Installation (All Users)
+
 ```bash
-# Install for all users on the system (requires sudo)
+# Clone and install for all users on the system (requires sudo)
+git clone https://github.com/mallanic/shell.git
+cd shell
 sudo ./install-system.sh
 
 # Test the installation
@@ -32,8 +50,9 @@ sudo ./install-system.sh
 ## Vim Integration
 
 ### Features
+
 - **Ctrl+C** - Copy (visual mode)
-- **Ctrl+X** - Cut (visual mode)  
+- **Ctrl+X** - Cut (visual mode)
 - **Ctrl+V** - Paste (insert/normal mode)
 - **Ctrl+A** - Select all
 - Mouse selection and scrolling
@@ -41,12 +60,14 @@ sudo ./install-system.sh
 - Line numbers and syntax highlighting
 
 ### Commands
+
 - `vedit <file>` - Edit file with modern vim config
 - `vim.modern` - Launch vim with modern config
 - `vim_install_system` - Install config system-wide
 - `vim_help` - Show help
 
 ### Installation Modes
+
 - **User mode**: `~/.vimrc.modern` (default)
 - **System mode**: `/etc/vim/vimrc.modern` (system-wide)
 
@@ -86,7 +107,7 @@ All users will automatically have access to the modern shell configuration on th
 # Test user installation
 ./test.sh
 
-# Test system installation  
+# Test system installation
 ./test-system.sh
 
 # Quick functionality test
