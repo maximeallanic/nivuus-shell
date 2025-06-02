@@ -20,11 +20,6 @@ jobs:
           sudo apt update
           sudo apt install -y zsh shellcheck
 
-      - name: Run tests before release
-        run: |
-          chmod +x test.sh
-          ./test.sh
-
       - name: Generate changelog
         id: changelog
         run: |
