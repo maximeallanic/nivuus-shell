@@ -101,17 +101,38 @@ The system-wide installation creates:
 
 All users will automatically have access to the modern shell configuration on their next login.
 
-## Testing
+## Troubleshooting
 
+### Common Issues
+
+#### Environment Variable Alerts
+If you see security warnings for environment variables, use:
 ```bash
-# Test user installation
-./test.sh
+# Check .env file manually
+envcheck
 
-# Test system installation
-./test-system.sh
+# Silent loading (default during startup)
+envload
+```
 
-# Quick functionality test
-./quick-test.sh
+#### Root/Sudo Issues
+If you get "No such file or directory" when using `sudo su`:
+```bash
+# Fix root configuration
+./fix-root.sh
+
+# Test root access
+sudo zsh -c 'echo "Root shell works"'
+```
+
+#### Cache Corruption
+If you see `.zwc` file errors:
+```bash
+# Fix cache issues
+./fix-zsh-cache.sh
+
+# Restart shell
+source ~/.zshrc
 ```
 
 ## Uninstallation

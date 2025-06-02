@@ -10,11 +10,14 @@ SAFE_ENV_VARS=(
     "REACT_APP_" "NEXT_PUBLIC_" "VITE_"
     "FIREBASE_" "GOOGLE_" "AWS_"
     "DOCKER_" "COMPOSE_"
+    "OPENAI_" "USE_" "WHATSAPP_" "DISCORD_"
+    "AUTHORIZED_" "TOKEN" "BOT_"
 )
 
 # Secure .env file validation
 validate_env_file() {
     local env_file="$1"
+    local silent_mode="${2:-true}"  # Silent by default
     local line_num=0
     local issues=0
     
@@ -25,33 +28,36 @@ validate_env_file() {
         [[ $line =~ ^[[:space:]]*# ]] && continue
         [[ -z ${line// } ]] && continue
         
-        # Check format
+        # Check format (only report critical syntax errors)
         if [[ ! $line =~ ^[A-Z_][A-Z0-9_]*=.*$ ]]; then
-            echo "⚠️  Line $line_num: Invalid format - $line"
+            [[ $silent_mode != "true" ]] && echo "⚠️  Line $line_num: Invalid format - $line"
             ((issues++))
             continue
         fi
         
-        # Extract variable name
-        local var_name=${line%%=*}
-        
-        # Check if variable is in whitelist
-        local is_safe=false
-        for safe_pattern in "${SAFE_ENV_VARS[@]}"; do
-            if [[ $var_name == $safe_pattern* ]]; then
-                is_safe=true
-                break
+        # Skip security warnings in silent mode (startup performance)
+        if [[ $silent_mode != "true" ]]; then
+            # Extract variable name
+            local var_name=${line%%=*}
+            
+            # Check if variable is in whitelist
+            local is_safe=false
+            for safe_pattern in "${SAFE_ENV_VARS[@]}"; do
+                if [[ $var_name == $safe_pattern* ]]; then
+                    is_safe=true
+                    break
+                fi
+            done
+            
+            if [[ $is_safe == false ]]; then
+                echo "🔒 Line $line_num: Potentially unsafe variable - $var_name"
             fi
-        done
-        
-        if [[ $is_safe == false ]]; then
-            echo "🔒 Line $line_num: Potentially unsafe variable - $var_name"
         fi
         
     done < "$env_file"
     
     if [[ $issues -gt 0 ]]; then
-        echo "❌ Found $issues formatting issues in $env_file"
+        [[ $silent_mode != "true" ]] && echo "❌ Found $issues formatting issues in $env_file"
         return 1
     fi
     

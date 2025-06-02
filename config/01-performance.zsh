@@ -2,6 +2,16 @@
 # PERFORMANCE SETTINGS
 # =============================================================================
 
+# Root-safe mode detection
+if [[ $EUID -eq 0 ]] || [[ -n "$MINIMAL_MODE" ]]; then
+    # Minimal root-safe configuration
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    export PS1='[root] %~ # '
+    return 0
+fi
+
 # Secure Antigen cache setup
 if [ ! -d "$HOME/.antigen" ]; then
     mkdir -p "$HOME/.antigen"
