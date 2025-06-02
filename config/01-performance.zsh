@@ -2,6 +2,15 @@
 # PERFORMANCE SETTINGS
 # =============================================================================
 
+# Secure Antigen cache setup
+if [ ! -d "$HOME/.antigen" ]; then
+    mkdir -p "$HOME/.antigen"
+    chmod 755 "$HOME/.antigen"
+fi
+
+# Remove corrupted cache files
+[ -f "$HOME/.antigen/init.zsh.zwc" ] && [ ! -r "$HOME/.antigen/init.zsh.zwc" ] && rm -f "$HOME/.antigen/init.zsh.zwc"
+
 # Disable global RCS loading for speed
 unsetopt GLOBAL_RCS
 

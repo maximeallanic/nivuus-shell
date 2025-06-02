@@ -75,31 +75,35 @@ download_repository() {
         rm -rf "$TEMP_DIR"
     fi
     
-    # Configure git to avoid credential prompts for this session
-    export GIT_TERMINAL_PROMPT=0
+    # Try curl method first (more reliable for public repos)
+    print_info "Using curl method for download..."
+    mkdir -p "$TEMP_DIR"
     
-    # Clone the repository with explicit HTTPS URL
-    git clone --depth 1 --no-single-branch "https://github.com/maximeallanic/zshrc.git" "$TEMP_DIR" 2>/dev/null || {
-        print_error "Failed to download repository. Trying alternative method..."
+    if curl -fsSL "https://github.com/maximeallanic/zshrc/archive/refs/heads/master.tar.gz" | tar -xz -C "$TEMP_DIR" --strip-components=1; then
+        print_success "Repository downloaded successfully using curl"
+    else
+        print_warning "Curl method failed, trying git clone..."
+        rm -rf "$TEMP_DIR"
         
-        # Try with curl as fallback
-        mkdir -p "$TEMP_DIR"
-        cd "$TEMP_DIR"
+        # Configure git to avoid credential prompts for this session
+        export GIT_TERMINAL_PROMPT=0
         
-        curl -fsSL "https://github.com/maximeallanic/zshrc/archive/refs/heads/master.tar.gz" | tar -xz --strip-components=1
-        
-        if [[ ! -f "install-system.sh" ]]; then
-            print_error "Failed to download repository using fallback method"
+        # Try git clone as fallback
+        if git clone --depth 1 "https://github.com/maximeallanic/zshrc.git" "$TEMP_DIR" 2>/dev/null; then
+            print_success "Repository downloaded successfully using git"
+        else
+            print_error "Both download methods failed"
             exit 1
         fi
-    }
+    fi
     
-    if [[ ! -d "$TEMP_DIR" ]]; then
-        print_error "Failed to download repository"
+    # Verify the download
+    if [[ ! -d "$TEMP_DIR" ]] || [[ ! -f "$TEMP_DIR/install-system.sh" ]]; then
+        print_error "Failed to download repository or installation script not found"
         exit 1
     fi
     
-    print_success "Repository downloaded successfully"
+    print_success "Repository downloaded and verified successfully"
 }
 
 # Run installation

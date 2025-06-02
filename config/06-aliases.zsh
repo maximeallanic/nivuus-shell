@@ -25,6 +25,11 @@ if command -v fd &> /dev/null; then
     alias fd='fd --hidden --follow --exclude .git'
 fi
 
+# Grep alternatives (avoid conflict with function)
+if command -v rg &> /dev/null; then
+    alias grep='rg'
+fi
+
 if command -v rg &> /dev/null; then
     alias grep='rg'
     alias rg='rg --smart-case --follow --hidden'

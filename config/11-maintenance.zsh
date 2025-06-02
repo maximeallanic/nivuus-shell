@@ -35,10 +35,10 @@ smart_maintenance() {
         fi
     fi
     
-    # Clean temporary files
-    rm -f /tmp/.firebase_cache_* 2>/dev/null
-    rm -rf "${XDG_RUNTIME_DIR:-/tmp}/firebase_cache_$USER" 2>/dev/null
-    rm -f /tmp/.env_backup_* 2>/dev/null
+    # Clean temporary files safely
+    find /tmp -maxdepth 1 -name '.firebase_cache_*' -type f -delete 2>/dev/null || true
+    [ -d "${XDG_RUNTIME_DIR:-/tmp}/firebase_cache_$USER" ] && rm -rf "${XDG_RUNTIME_DIR:-/tmp}/firebase_cache_$USER" 2>/dev/null || true
+    find /tmp -maxdepth 1 -name '.env_backup_*' -type f -delete 2>/dev/null || true
     
     # Rebuild completion if old
     if [[ -f ~/.zcompdump ]]; then

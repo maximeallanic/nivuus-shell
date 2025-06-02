@@ -71,11 +71,10 @@ load_env() {
         return 1
     fi
     
-    echo "🔍 Validating $env_file..."
-    if ! validate_env_file "$env_file"; then
-        echo "❌ Validation failed. Load anyway? (y/N)"
-        read -r response
-        [[ $response != [yY] ]] && return 1
+    # Silent validation for startup performance
+    if ! validate_env_file "$env_file" 2>/dev/null; then
+        # Silent validation failed - skip loading for startup performance
+        return 1
     fi
     
     # Create backup of current environment
@@ -124,7 +123,19 @@ auto_env() {
 # Manual environment management commands
 envload() {
     local env_file="${1:-.env}"
+    echo "🔍 Validating $env_file..."
+    if ! validate_env_file "$env_file"; then
+        echo "❌ Validation failed. Load anyway? (y/N)"
+        read -r response
+        [[ $response != [yY] ]] && return 1
+    fi
     load_env "$env_file"
+}
+
+envcheck() {
+    local env_file="${1:-.env}"
+    echo "🔍 Validating $env_file..."
+    validate_env_file "$env_file"
 }
 
 envunload() {

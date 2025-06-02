@@ -11,12 +11,12 @@ f() {
     fi
 }
 
-# Smart grep function
-gr() {
+# Smart search function (renamed to avoid alias conflict)
+smart_grep() {
     if command -v rg &> /dev/null; then
-        rg "$1"
+        rg "$@"
     else
-        grep -r "$1" . 2>/dev/null
+        grep -r "$@" . 2>/dev/null
     fi
 }
 
