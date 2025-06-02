@@ -4,11 +4,19 @@
 
 # Root-safe mode detection
 if [[ $EUID -eq 0 ]] || [[ -n "$MINIMAL_MODE" ]]; then
-    # Minimal root-safe configuration
+    # Minimal root-safe configuration (only show message once)
+    if [[ -z "$ROOT_SHELL_INITIALIZED" ]]; then
+        export ROOT_SHELL_INITIALIZED=1
+    fi
     export LANG=C.UTF-8
     export LC_ALL=C.UTF-8
     export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     export PS1='[root] %~ # '
+    
+    # Disable problematic features for root
+    export ANTIGEN_CACHE_ENABLED=false
+    export SKIP_UPDATES_CHECK=true
+    
     return 0
 fi
 

@@ -106,7 +106,9 @@ All users will automatically have access to the modern shell configuration on th
 ### Common Issues
 
 #### Environment Variable Alerts
+
 If you see security warnings for environment variables, use:
+
 ```bash
 # Check .env file manually
 envcheck
@@ -116,7 +118,9 @@ envload
 ```
 
 #### Root/Sudo Issues
+
 If you get "No such file or directory" when using `sudo su`:
+
 ```bash
 # Fix root configuration
 ./fix-root.sh
@@ -126,7 +130,9 @@ sudo zsh -c 'echo "Root shell works"'
 ```
 
 #### Cache Corruption
+
 If you see `.zwc` file errors:
+
 ```bash
 # Fix cache issues
 ./fix-zsh-cache.sh

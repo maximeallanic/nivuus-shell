@@ -14,12 +14,10 @@ export SKIP_GLOBAL_CONFIG=1
 export MINIMAL_MODE=1
 
 # Safe shell prompt for root
-if [[ $EUID -eq 0 ]]; then
-    export PS1='[root] %~ # '
-fi
+# if [[ $EUID -eq 0 ]]; then
+#     export PS1='[root] %~ # '
+# fi
 
 # Prevent loading user-specific configs that might fail
 unset ANTIGEN_CACHE
 unset ANTIGEN_REPO_CACHE
-
-echo "🔐 Root shell initialized safely"

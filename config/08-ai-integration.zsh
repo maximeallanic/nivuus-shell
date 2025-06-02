@@ -3,15 +3,18 @@
 # =============================================================================
 
 # GitHub Copilot CLI integration (enhanced)
-if command -v gh &> /dev/null; then
-    # Standard Copilot aliases
-    eval "$(gh copilot alias -- zsh)" 2>/dev/null
-    
-    # Enhanced aliases for better workflow
-    alias ai='gh copilot suggest'
-    alias explain='gh copilot explain'
-    alias fix='gh copilot suggest -t shell'
-    alias gitai='gh copilot suggest -t git'
+if command -v gh &> /dev/null && [[ $EUID -ne 0 ]]; then
+    # Test if gh copilot is available and working
+    if gh copilot --help &>/dev/null; then
+        # Standard Copilot aliases (with error handling)
+        eval "$(gh copilot alias -- zsh 2>/dev/null || echo '# Copilot alias failed')"
+        
+        # Enhanced aliases for better workflow
+        alias ai='gh copilot suggest'
+        alias explain='gh copilot explain'
+        alias fix='gh copilot suggest -t shell'
+        alias gitai='gh copilot suggest -t git'
+    fi
     
     # Quick AI command helper
     ask() {
