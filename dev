@@ -41,11 +41,13 @@ show_help() {
     echo
     
     print_section "📦 Release Management"
-    print_command "make release-patch" "Create patch release (x.x.X)"
-    print_command "make release-minor" "Create minor release (x.X.x)"
-    print_command "make release-major" "Create major release (X.x.x)"
+    print_command "make release-patch" "Create patch release (x.x.X) - automatic"
+    print_command "make release-minor" "Create minor release (x.X.x) - automatic"
+    print_command "make release-major" "Create major release (X.x.x) - automatic"
     print_command "make release-dry" "Dry run release (test only)"
+    print_command "make release-interactive" "Interactive release (prompt for changelog)"
     print_command "./release patch --dry-run" "Detailed dry run"
+    print_command "./release patch --auto-changelog" "Quick release with auto changelog"
     echo
     
     print_section "🔄 Update System"
