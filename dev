@@ -1,0 +1,149 @@
+#!/bin/bash
+
+# =============================================================================
+# NIVUUS SHELL - DEVELOPMENT HELPER
+# =============================================================================
+
+set -euo pipefail
+
+# Colors
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[0;33m'
+readonly BLUE='\033[0;34m'
+readonly PURPLE='\033[0;35m'
+readonly CYAN='\033[0;36m'
+readonly NC='\033[0m'
+
+print_header() {
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}                            🚀 NIVUUS SHELL - DEVELOPMENT HELPER                          ${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo
+}
+
+print_section() {
+    echo -e "${CYAN}${1}${NC}"
+    echo -e "${CYAN}$(printf '%.0s─' $(seq 1 ${#1}))${NC}"
+}
+
+print_command() {
+    echo -e "  ${PURPLE}$1${NC} - $2"
+}
+
+show_help() {
+    print_header
+    
+    print_section "🏗️  Development Commands"
+    print_command "make install" "Install Nivuus Shell locally"
+    print_command "make test" "Test configuration syntax"
+    print_command "make lint" "Lint shell scripts"
+    print_command "make clean" "Clean temporary files"
+    echo
+    
+    print_section "📦 Release Management"
+    print_command "make release-patch" "Create patch release (x.x.X)"
+    print_command "make release-minor" "Create minor release (x.X.x)"
+    print_command "make release-major" "Create major release (X.x.x)"
+    print_command "make release-dry" "Dry run release (test only)"
+    print_command "./release patch --dry-run" "Detailed dry run"
+    echo
+    
+    print_section "🔄 Update System"
+    print_command "make check-updates" "Check for new versions"
+    print_command "make update" "Update to latest version"
+    print_command "./scripts/update.sh --check" "Manual update check"
+    echo
+    
+    print_section "🛠️  Setup Requirements"
+    print_command "./scripts/install-gh.sh" "Install GitHub CLI"
+    print_command "gh auth login" "Authenticate with GitHub"
+    echo
+    
+    print_section "📁 Project Structure"
+    echo -e "  ${YELLOW}config/${NC}          - ZSH configuration modules"
+    echo -e "  ${YELLOW}install/${NC}         - Installation scripts"  
+    echo -e "  ${YELLOW}scripts/${NC}         - Development & release scripts"
+    echo -e "  ${YELLOW}install.sh${NC}       - Main installer"
+    echo -e "  ${YELLOW}release${NC}          - Release wrapper script"
+    echo -e "  ${YELLOW}VERSION${NC}          - Current version"
+    echo -e "  ${YELLOW}CHANGELOG.md${NC}     - Version history"
+    echo
+    
+    print_section "🚀 Quick Start Release Process"
+    echo -e "  ${GREEN}1.${NC} Make your changes"
+    echo -e "  ${GREEN}2.${NC} Test: ${PURPLE}make test${NC}"
+    echo -e "  ${GREEN}3.${NC} Dry run: ${PURPLE}make release-dry${NC}"
+    echo -e "  ${GREEN}4.${NC} Release: ${PURPLE}make release-patch${NC} (or minor/major)"
+    echo -e "  ${GREEN}5.${NC} Script will prompt for changelog entries"
+    echo -e "  ${GREEN}6.${NC} GitHub release created automatically"
+    echo
+    
+    print_section "📋 Pre-release Checklist"
+    echo -e "  ${GREEN}✓${NC} All changes committed"
+    echo -e "  ${GREEN}✓${NC} On main/master branch"
+    echo -e "  ${GREEN}✓${NC} Tests passing: ${PURPLE}make test${NC}"
+    echo -e "  ${GREEN}✓${NC} GitHub CLI authenticated: ${PURPLE}gh auth status${NC}"
+    echo -e "  ${GREEN}✓${NC} Dry run successful: ${PURPLE}make release-dry${NC}"
+    echo
+    
+    print_section "🌐 Installation Commands (Post-Release)"
+    echo -e "  ${YELLOW}Latest:${NC} curl -fsSL https://github.com/maximeallanic/nivuus-shell/releases/latest/download/install.sh | bash"
+    echo -e "  ${YELLOW}Master:${NC} curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/master/install.sh | bash"
+    echo
+}
+
+check_status() {
+    print_header
+    print_section "📊 Project Status"
+    
+    # Current version
+    if [[ -f "VERSION" ]]; then
+        VERSION=$(cat VERSION)
+        echo -e "  ${GREEN}Current Version:${NC} $VERSION"
+    else
+        echo -e "  ${YELLOW}Version file not found${NC}"
+    fi
+    
+    # Git status
+    if git rev-parse --git-dir > /dev/null 2>&1; then
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        CHANGES=$(git status --porcelain | wc -l)
+        echo -e "  ${GREEN}Git Branch:${NC} $BRANCH"
+        if [[ $CHANGES -eq 0 ]]; then
+            echo -e "  ${GREEN}Working Directory:${NC} Clean"
+        else
+            echo -e "  ${YELLOW}Working Directory:${NC} $CHANGES uncommitted changes"
+        fi
+    fi
+    
+    # GitHub CLI
+    if command -v gh &> /dev/null; then
+        if gh auth status &> /dev/null; then
+            echo -e "  ${GREEN}GitHub CLI:${NC} Authenticated"
+        else
+            echo -e "  ${YELLOW}GitHub CLI:${NC} Not authenticated"
+        fi
+    else
+        echo -e "  ${YELLOW}GitHub CLI:${NC} Not installed"
+    fi
+    
+    echo
+}
+
+main() {
+    case "${1:-help}" in
+        "status")
+            check_status
+            ;;
+        "help"|"-h"|"--help"|"")
+            show_help
+            ;;
+        *)
+            echo "Unknown command: $1"
+            echo "Use: $0 [help|status]"
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

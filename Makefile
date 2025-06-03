@@ -80,15 +80,26 @@ info: ## Show configuration information
 	@echo "Backup directory: $(BACKUP_DIR)"
 
 # Release management
-.PHONY: release-patch release-minor release-major release-dry-run
-release-patch:
-	@./release.sh patch
+release-patch: ## Create a patch release (x.x.X)
+	@echo "🚀 Creating patch release..."
+	@./release patch
 
-release-minor:
-	@./release.sh minor
+release-minor: ## Create a minor release (x.X.x)
+	@echo "🚀 Creating minor release..."
+	@./release minor
 
-release-major:
-	@./release.sh major
+release-major: ## Create a major release (X.x.x)
+	@echo "🚀 Creating major release..."
+	@./release major
 
-release-dry-run:
-	@./release.sh -d patch
+release-dry: ## Dry run release (shows what would be done)
+	@echo "🧪 Dry run release..."
+	@./release patch --dry-run
+
+check-updates: ## Check for available updates
+	@echo "🔍 Checking for updates..."
+	@./scripts/update.sh --check
+
+update: ## Update to latest version
+	@echo "⬆️  Updating to latest version..."
+	@./scripts/update.sh --auto

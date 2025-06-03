@@ -10,6 +10,22 @@ set -euo pipefail
 REPO_URL="https://github.com/maximeallanic/nivuus-shell.git"
 VERSION="3.0.0"
 
+# Function to get latest version from GitHub
+get_latest_version() {
+    local latest_version
+    if command -v curl &> /dev/null; then
+        latest_version=$(curl -s "https://api.github.com/repos/maximeallanic/nivuus-shell/releases/latest" | grep '"tag_name":' | sed -E 's/.*"tag_name": *"v?([^"]+)".*/\1/' 2>/dev/null)
+    elif command -v wget &> /dev/null; then
+        latest_version=$(wget -qO- "https://api.github.com/repos/maximeallanic/nivuus-shell/releases/latest" | grep '"tag_name":' | sed -E 's/.*"tag_name": *"v?([^"]+)".*/\1/' 2>/dev/null)
+    fi
+    
+    if [[ -n "$latest_version" ]]; then
+        echo "$latest_version"
+    else
+        echo "$VERSION"  # Fallback to hardcoded version
+    fi
+}
+
 # Determine script location (handle both local and piped execution)
 SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
@@ -74,7 +90,13 @@ if [[ -z "$SCRIPT_DIR" ]] || [[ ! -f "$SCRIPT_DIR/install/common.sh" ]]; then
         rm -rf "$TEMP_DIR"
     fi
     
-    git clone "$REPO_URL" "$TEMP_DIR"
+    # Get latest version and use it for cloning
+    LATEST_VERSION=$(get_latest_version)
+    print_remote_step "Using version: $LATEST_VERSION"
+    
+    git clone --depth 1 --branch "v$LATEST_VERSION" "$REPO_URL" "$TEMP_DIR" 2>/dev/null || \
+    git clone --depth 1 "$REPO_URL" "$TEMP_DIR"
+    
     print_remote_success "Repository downloaded"
     
     # Re-execute from cloned repository

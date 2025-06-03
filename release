@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# =============================================================================
+# NIVUUS SHELL - RELEASE WRAPPER
+# =============================================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RELEASE_SCRIPT="$SCRIPT_DIR/scripts/release.sh"
+
+if [[ ! -x "$RELEASE_SCRIPT" ]]; then
+    echo "❌ Release script not found at $RELEASE_SCRIPT"
+    exit 1
+fi
+
+exec "$RELEASE_SCRIPT" "$@"

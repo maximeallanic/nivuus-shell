@@ -8,6 +8,8 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -19,43 +21,87 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y zsh shellcheck
+          
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
+      - name: Verify version consistency
+        run: |
+          TAG_VERSION="${{ steps.version.outputs.VERSION }}"
+          FILE_VERSION=$(cat VERSION)
+          
+          if [ "$TAG_VERSION" != "$FILE_VERSION" ]; then
+            echo "❌ Version mismatch: tag=$TAG_VERSION, file=$FILE_VERSION"
+            exit 1
+          fi
+          
+          INSTALL_VERSION=$(grep '^VERSION=' install.sh | cut -d'"' -f2)
+          if [ "$TAG_VERSION" != "$INSTALL_VERSION" ]; then
+            echo "❌ Version mismatch in install.sh: tag=$TAG_VERSION, install=$INSTALL_VERSION"
+            exit 1
+          fi
+          
+          echo "✅ All versions match: $TAG_VERSION"
 
-      - name: Generate changelog
+      - name: Extract changelog for this version
         id: changelog
         run: |
-          # Simple changelog generation
-          echo "## Changes" > changelog.md
-          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> changelog.md
-
-          # Add performance metrics
-          echo "" >> changelog.md
-          echo "## Performance" >> changelog.md
-          echo "- Target startup time: < 300ms" >> changelog.md
-          echo "- Modular design: 11 focused modules" >> changelog.md
-          echo "- File size limit: < 200 lines per module" >> changelog.md
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          # Extract changelog content between this version and the next version header
+          CHANGELOG=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$d' | tail -n +3)
+          
+          # Save to file to preserve formatting
+          echo "$CHANGELOG" > release_notes.md
+          
+          # Set output for GitHub release
+          echo "CHANGELOG_FILE=release_notes.md" >> $GITHUB_OUTPUT
 
       - name: Create release archive
         run: |
           # Create installation package
-          tar -czf zsh-ultra-performance-${{ github.ref_name }}.tar.gz \
-            .zshrc \
+          tar -czf nivuus-shell-${{ steps.version.outputs.VERSION }}.tar.gz \
             config/ \
+            install/ \
+            scripts/ \
             install.sh \
+            install-latest.sh \
             uninstall.sh \
+            release \
             README.md \
-            Makefile \
-            .config
+            CHANGELOG.md \
+            ARCHITECTURE.md \
+            VERSION \
+            Makefile
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          name: ZSH Ultra Performance Config ${{ github.ref_name }}
-          body_path: changelog.md
+          name: "Release v${{ steps.version.outputs.VERSION }}"
+          body_path: release_notes.md
+          files: |
+            nivuus-shell-${{ steps.version.outputs.VERSION }}.tar.gz
+            install.sh
+            install-latest.sh
           draft: false
           prerelease: false
-          files: |
-            zsh-ultra-performance-${{ github.ref_name }}.tar.gz
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify release creation
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          echo "✅ Release v$VERSION created successfully"
+          echo "📦 Installation commands:"
+          echo "# Latest release:"
+          echo "curl -fsSL https://github.com/maximeallanic/nivuus-shell/releases/latest/download/install.sh | bash"
+          echo "# Specific version:"
+          echo "curl -fsSL https://github.com/maximeallanic/nivuus-shell/releases/download/v$VERSION/install.sh | bash"
+
+      - name: Cleanup
+        run: |
+          rm -f release_notes.md
 
   docker:
     runs-on: ubuntu-latest
