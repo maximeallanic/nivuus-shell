@@ -4,6 +4,64 @@
 
 set -euo pipefail
 
+# Repository configuration
+REPO_URL="https://github.com/maximeallanic/shell.git"
+VERSION="3.0.0"
+
+# Determine script location (handle both local and piped execution)
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+
+# Auto-clone detection and setup
+if [[ -z "$SCRIPT_DIR" ]] || [[ ! -f "$SCRIPT_DIR/uninstall.sh" ]] || [[ "$(basename "$SCRIPT_PATH")" != "uninstall.sh" ]]; then
+    # We're running remotely, need to clone first
+    print_remote_header() {
+        echo -e "\033[0;34m================================\033[0m"
+        echo -e "\033[0;34m  Modern ZSH Remote Uninstall\033[0m"
+        echo -e "\033[0;34m================================\033[0m"
+        echo
+    }
+    
+    print_remote_step() {
+        echo -e "\033[0;36m➤ $1\033[0m"
+    }
+    
+    print_remote_success() {
+        echo -e "\033[0;32m✅ $1\033[0m"
+    }
+    
+    print_remote_error() {
+        echo -e "\033[0;31m❌ $1\033[0m"
+    }
+    
+    TEMP_DIR="/tmp/shell-uninstall-$$"
+    
+    print_remote_header
+    
+    # Install git if needed
+    if ! command -v git &> /dev/null; then
+        print_remote_step "Installing git..."
+        sudo apt update > /dev/null 2>&1
+        sudo apt install -y git
+        print_remote_success "Git installed"
+    fi
+    
+    # Clone repository
+    print_remote_step "Downloading uninstaller..."
+    if [[ -d "$TEMP_DIR" ]]; then
+        rm -rf "$TEMP_DIR"
+    fi
+    
+    git clone "$REPO_URL" "$TEMP_DIR"
+    print_remote_success "Repository downloaded"
+    
+    # Re-execute from cloned repository
+    print_remote_step "Launching uninstaller..."
+    cd "$TEMP_DIR"
+    chmod +x uninstall.sh
+    exec ./uninstall.sh "$@"
+fi
+
 # Color codes for output
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'

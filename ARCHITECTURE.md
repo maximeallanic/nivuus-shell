@@ -70,19 +70,29 @@ sudo ./install.sh --system
 4. **Re-execute** from cloned directory
 5. **Normal installation** proceeds with all modules
 
+## Remote Uninstallation Flow
+
+1. **Uninstall script downloaded** via curl
+2. **Auto-detection** checks for repository structure
+3. **If remote execution**: Clone repository to /tmp/shell-uninstall-$$
+4. **Re-execute** from cloned directory
+5. **Normal uninstallation** proceeds with backup/restore
+
 ## Benefits
 
-- ✅ **Single script** for all scenarios
+- ✅ **Single script** for all scenarios (install & uninstall)
 - ✅ **No separate remote installers** needed
 - ✅ **Automatic repository cloning**
 - ✅ **Maintains modular architecture**
 - ✅ **Simplified maintenance**
 - ✅ **Clean, minimal structure**
+- ✅ **Both installation and uninstallation work remotely**
 
 ## Testing
 
 ```bash
-./test-install.sh    # Test unified installer
+./test-install.sh      # Test unified installer
+./test-uninstall.sh    # Test remote uninstaller
 ```
 
 This architecture provides maximum simplicity while maintaining all the power and modularity of the original system.

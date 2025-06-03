@@ -223,13 +223,43 @@ source ~/.zshrc
 
 ## Uninstallation
 
+### Remote Uninstallation (One-command)
+
 ```bash
+# Remove user installation remotely
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/uninstall.sh | bash
+
+# Remove system installation remotely (requires sudo)
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/uninstall.sh | sudo bash
+```
+
+### Local Uninstallation
+
+```bash
+# Clone repository first (if not already done)
+git clone https://github.com/maximeallanic/shell.git
+cd shell
+
 # Remove user installation
 ./uninstall.sh
 
-# Remove system installation (requires sudo)
-sudo ./uninstall-system.sh
+# Remove system installation (requires sudo)  
+sudo ./uninstall.sh
 ```
+
+### What Gets Removed
+
+- ZSH Ultra Performance configuration files
+- ZSH plugins (syntax highlighting, autosuggestions)
+- ZSH cache and compiled files
+- Optional: packages installed by the installer (eza, bat, fd-find, ripgrep)
+- Optional: reset default shell to bash
+
+### What Gets Preserved
+
+- Configuration backups in `~/.config/zsh-ultra-backup`
+- System packages (unless explicitly chosen for removal)
+- Custom user configurations outside our scope
 
 ## License
 
