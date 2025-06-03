@@ -49,8 +49,11 @@ print_info() {
 get_current_version() {
     local version_file=""
     
-    # Check user installation first
-    if [[ -f "$USER_INSTALL_DIR/VERSION" ]]; then
+    # Check development directory first (for testing)
+    if [[ -f "$(pwd)/VERSION" ]]; then
+        version_file="$(pwd)/VERSION"
+    # Check user installation
+    elif [[ -f "$USER_INSTALL_DIR/VERSION" ]]; then
         version_file="$USER_INSTALL_DIR/VERSION"
     elif [[ -f "$SYSTEM_INSTALL_DIR/VERSION" ]]; then
         version_file="$SYSTEM_INSTALL_DIR/VERSION"
