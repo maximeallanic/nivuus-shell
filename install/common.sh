@@ -72,13 +72,87 @@ check_root() {
     fi
 }
 
-# Check if we're on a Debian-based system
-check_debian() {
-    if ! command -v apt &> /dev/null; then
-        print_error "This installer is designed for Debian-based systems"
+# Detect operating system and package manager
+detect_os() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        OS="macos"
+        DISTRO="macos"
+        PACKAGE_MANAGER="brew"
+    elif [[ -f /etc/os-release ]]; then
+        source /etc/os-release
+        OS="linux"
+        DISTRO="${ID,,}"
+        
+        case "$DISTRO" in
+            ubuntu|debian|pop|elementary|zorin)
+                PACKAGE_MANAGER="apt"
+                ;;
+            centos|rhel|fedora|almalinux|rocky)
+                if command -v dnf &> /dev/null; then
+                    PACKAGE_MANAGER="dnf"
+                elif command -v yum &> /dev/null; then
+                    PACKAGE_MANAGER="yum"
+                fi
+                ;;
+            alpine)
+                PACKAGE_MANAGER="apk"
+                ;;
+            arch|manjaro|endeavouros)
+                PACKAGE_MANAGER="pacman"
+                ;;
+            opensuse*|suse*)
+                PACKAGE_MANAGER="zypper"
+                ;;
+            *)
+                # Try to detect by available commands
+                if command -v apt &> /dev/null; then
+                    PACKAGE_MANAGER="apt"
+                elif command -v dnf &> /dev/null; then
+                    PACKAGE_MANAGER="dnf"
+                elif command -v yum &> /dev/null; then
+                    PACKAGE_MANAGER="yum"
+                elif command -v apk &> /dev/null; then
+                    PACKAGE_MANAGER="apk"
+                elif command -v pacman &> /dev/null; then
+                    PACKAGE_MANAGER="pacman"
+                elif command -v zypper &> /dev/null; then
+                    PACKAGE_MANAGER="zypper"
+                else
+                    print_error "Unsupported package manager"
+                    exit 1
+                fi
+                ;;
+        esac
+    else
+        print_error "Unable to detect operating system"
         exit 1
     fi
-    print_success "Debian-based system detected"
+    
+    print_success "Detected: $OS ($DISTRO) with $PACKAGE_MANAGER"
+}
+
+# Check if required package manager is available
+check_package_manager() {
+    case "$PACKAGE_MANAGER" in
+        brew)
+            if ! command -v brew &> /dev/null; then
+                print_error "Homebrew not found. Please install it first:"
+                print_info "/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+                exit 1
+            fi
+            ;;
+        apt|dnf|yum|apk|pacman|zypper)
+            if ! command -v "$PACKAGE_MANAGER" &> /dev/null; then
+                print_error "Package manager $PACKAGE_MANAGER not found"
+                exit 1
+            fi
+            ;;
+        *)
+            print_error "Unsupported package manager: $PACKAGE_MANAGER"
+            exit 1
+            ;;
+    esac
+    print_success "Package manager $PACKAGE_MANAGER is available"
 }
 
 # Check if we're in the right directory

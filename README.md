@@ -28,7 +28,8 @@
 - **17 specialized modules** - Highly modular and maintainable
 - **Smart project detection** - Auto-configures for Node.js, Python, Rust, Go
 - **Environment management** - Secure .env handling with validation
-- **Cross-platform** - Linux, macOS, WSL2 support
+- **Cross-platform** - Linux, macOS, WSL2, and more
+- **Multi-distro support** - Ubuntu, Debian, CentOS, Alpine, Arch, openSUSE
 - **Root-safe mode** - Secure minimal configuration for privileged access
 
 ### 📦 **Developer Experience**
@@ -46,6 +47,18 @@
 - **Security features** - Safe environment variable handling
 
 ## 🚀 Quick Start
+
+### Supported Platforms
+
+| Platform | Package Manager | Status |
+|----------|----------------|--------|
+| **Ubuntu/Debian** | `apt` | ✅ Fully supported |
+| **macOS** | `brew` | ✅ Fully supported |
+| **CentOS/RHEL/Fedora** | `dnf`/`yum` | ✅ Fully supported |
+| **Alpine Linux** | `apk` | ✅ Fully supported |
+| **Arch/Manjaro** | `pacman` | ✅ Fully supported |
+| **openSUSE** | `zypper` | ✅ Fully supported |
+| **WSL2** | Auto-detect | ✅ Fully supported |
 
 ### One-Line Installation
 
@@ -80,6 +93,27 @@ git clone https://github.com/maximeallanic/nivuus-shell.git && cd nivuus-shell
 
 # Show all options
 ./install.sh --help
+```
+
+### Platform-Specific Notes
+
+#### macOS Prerequisites
+```bash
+# Install Homebrew if not present
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+#### CentOS/RHEL Prerequisites  
+```bash
+# Enable EPEL repository for additional packages
+sudo dnf install -y epel-release  # CentOS 8+
+sudo yum install -y epel-release  # CentOS 7
+```
+
+#### Alpine Linux
+```bash
+# Some packages require community repository
+echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" | sudo tee -a /etc/apk/repositories
 ```
 
 ## 🤖 AI-Powered Commands
@@ -319,6 +353,31 @@ shell/
 └── docs/                              # Comprehensive documentation
 ```
 
+## 📦 Cross-Platform Package Support
+
+### Package Installation Matrix
+
+| Package | Ubuntu/Debian | CentOS/RHEL | Alpine | Arch | openSUSE | macOS |
+|---------|---------------|-------------|--------|------|----------|-------|
+| **Core Tools** |
+| ZSH | `apt install zsh` | `dnf install zsh` | `apk add zsh` | `pacman -S zsh` | `zypper install zsh` | `brew install zsh` |
+| Git | `apt install git` | `dnf install git` | `apk add git` | `pacman -S git` | `zypper install git` | `brew install git` |
+| **Modern CLI** |
+| eza | Official repo | `dnf install eza` | GitHub fallback | `pacman -S eza` | GitHub fallback | `brew install eza` |
+| bat | `apt install bat` | `dnf install bat` | `apk add bat` | `pacman -S bat` | `zypper install bat` | `brew install bat` |
+| fd | `apt install fd-find` | `dnf install fd-find` | `apk add fd` | `pacman -S fd` | `zypper install fd` | `brew install fd` |
+| ripgrep | `apt install ripgrep` | `dnf install ripgrep` | `apk add ripgrep` | `pacman -S ripgrep` | `zypper install ripgrep` | `brew install ripgrep` |
+| **ZSH Plugins** |
+| syntax-highlighting | System package | Manual install | Manual install | System package | Manual install | `brew install` |
+| autosuggestions | System package | Manual install | Manual install | System package | Manual install | `brew install` |
+
+### Smart Fallback Strategy
+- **Package unavailable** → GitHub releases installation
+- **Permission denied** → User-local installation  
+- **Network issues** → Skip optional packages with warning
+
+```
+
 **Architecture Benefits:**
 - 🔧 **Maintainability** - Each module has single responsibility
 - 🧪 **Testability** - Individual components tested independently
@@ -487,6 +546,26 @@ sudo ./uninstall.sh         # Remove system installation
 **Performance Functions:**
 - `benchmark_shell()` - Complete performance analysis
 - `profile_zsh()` - Detailed configuration profiling
+
+## 🧪 Platform Testing
+
+Before installation, you can test platform compatibility:
+
+```bash
+# Clone repository first
+git clone https://github.com/maximeallanic/nivuus-shell.git
+cd nivuus-shell
+
+# Test your platform compatibility
+./test-platforms.sh
+```
+
+The test will verify:
+- ✅ Operating system detection
+- ✅ Package manager availability  
+- ✅ Required system commands
+- ✅ Sudo privileges (if needed)
+- ✅ Platform-specific features
 
 ## 📄 License
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# MODERN ZSH CONFIGURATION INSTALLER FOR DEBIAN
+# NIVUUS SHELL - CROSS-PLATFORM ZSH CONFIGURATION INSTALLER
 # =============================================================================
 
 set -euo pipefail
@@ -19,7 +19,7 @@ if [[ -z "$SCRIPT_DIR" ]] || [[ ! -f "$SCRIPT_DIR/install/common.sh" ]]; then
     # We're running remotely, need to clone first
     print_remote_header() {
         echo -e "\033[0;34m================================\033[0m"
-        echo -e "\033[0;34m  Modern ZSH Remote Install\033[0m"
+        echo -e "\033[0;34m  Nivuus Shell Remote Install\033[0m"
         echo -e "\033[0;34m================================\033[0m"
         echo
     }
@@ -40,11 +40,31 @@ if [[ -z "$SCRIPT_DIR" ]] || [[ ! -f "$SCRIPT_DIR/install/common.sh" ]]; then
     
     print_remote_header
     
-    # Install git if needed
+    # Install git if needed (cross-platform)
     if ! command -v git &> /dev/null; then
         print_remote_step "Installing git..."
-        sudo apt update > /dev/null 2>&1
-        sudo apt install -y git
+        
+        # Detect package manager and install git
+        if command -v apt &> /dev/null; then
+            sudo apt update > /dev/null 2>&1
+            sudo apt install -y git
+        elif command -v dnf &> /dev/null; then
+            sudo dnf install -y git
+        elif command -v yum &> /dev/null; then
+            sudo yum install -y git
+        elif command -v apk &> /dev/null; then
+            sudo apk add git
+        elif command -v pacman &> /dev/null; then
+            sudo pacman -S --noconfirm git
+        elif command -v zypper &> /dev/null; then
+            sudo zypper install -y git
+        elif command -v brew &> /dev/null; then
+            brew install git
+        else
+            print_remote_error "Cannot install git: unsupported package manager"
+            exit 1
+        fi
+        
         print_remote_success "Git installed"
     fi
     
@@ -115,10 +135,11 @@ install_github_cli() {
 # =============================================================================
 
 install_user_mode() {
-    print_header "Installing Modern ZSH Configuration (User Mode)"
+    print_header "Installing Nivuus Shell Configuration (User Mode)"
     
     # Pre-installation checks
-    check_debian
+    detect_os
+    check_package_manager
     check_root
     
     # Backup existing configuration
@@ -190,10 +211,11 @@ install_user_mode() {
 }
 
 install_system_mode() {
-    print_header "Installing Modern ZSH Configuration (System-wide)"
+    print_header "Installing Nivuus Shell Configuration (System-wide)"
     
     # Pre-installation checks
-    check_debian
+    detect_os
+    check_package_manager
     check_root
     
     # Check if we're in the right directory
