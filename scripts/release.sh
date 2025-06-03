@@ -55,7 +55,7 @@ print_info() {
 
 show_usage() {
     echo -e "${WHITE}${BOLD}Usage:${NC}"
-    echo -e "  $0 <major|minor|patch> [--dry-run] [--no-push]"
+    echo -e "  $0 <major|minor|patch> [--dry-run] [--no-push] [--auto-changelog]"
     echo
     echo -e "${WHITE}${BOLD}Arguments:${NC}"
     echo -e "  major     Increment major version (1.0.0 -> 2.0.0)"
@@ -63,13 +63,15 @@ show_usage() {
     echo -e "  patch     Increment patch version (1.0.0 -> 1.0.1)"
     echo
     echo -e "${WHITE}${BOLD}Options:${NC}"
-    echo -e "  --dry-run    Show what would be done without making changes"
-    echo -e "  --no-push    Don't push changes to remote repository"
+    echo -e "  --dry-run         Show what would be done without making changes"
+    echo -e "  --no-push         Don't push changes to remote repository"
+    echo -e "  --auto-changelog  Use automatic changelog entries (no prompts)"
     echo
     echo -e "${WHITE}${BOLD}Examples:${NC}"
     echo -e "  $0 patch"
     echo -e "  $0 minor --dry-run"
     echo -e "  $0 major --no-push"
+    echo -e "  $0 patch --auto-changelog"
 }
 
 check_dependencies() {
@@ -162,6 +164,7 @@ prompt_changelog_entry() {
     
     echo -e "${YELLOW}${BOLD}Please provide changelog entry for version $version:${NC}"
     echo -e "${YELLOW}Enter your changes (one per line, empty line to finish):${NC}"
+    echo -e "${YELLOW}Or press Ctrl+C and use --auto-changelog for automatic entries${NC}"
     
     local changes=()
     while IFS= read -r line; do
@@ -169,12 +172,18 @@ prompt_changelog_entry() {
         changes+=("- $line")
     done
     
+    # If no entries provided, use default
+    if [[ ${#changes[@]} -eq 0 ]]; then
+        changes+=("- Bug fixes and improvements")
+    fi
+    
     printf '%s\n' "${changes[@]}"
 }
 
 update_changelog() {
     local new_version="$1"
     local dry_run="$2"
+    local auto_changelog="$3"
     
     local date_str
     date_str=$(date +%Y-%m-%d)
@@ -184,9 +193,14 @@ update_changelog() {
         return
     fi
     
-    # Get changelog entries from user
+    # Get changelog entries from user or auto-generate
     local changelog_entries
-    changelog_entries=$(prompt_changelog_entry "$new_version")
+    if [[ "$auto_changelog" == "true" ]]; then
+        changelog_entries="- Bug fixes and improvements"
+        print_info "Using automatic changelog entry"
+    else
+        changelog_entries=$(prompt_changelog_entry "$new_version")
+    fi
     
     if [[ -z "$changelog_entries" ]]; then
         print_error "No changelog entries provided. Aborting."
@@ -274,6 +288,7 @@ main() {
     local increment_type=""
     local dry_run="false"
     local no_push="false"
+    local auto_changelog="false"
     
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -291,6 +306,10 @@ main() {
                 ;;
             --no-push)
                 no_push="true"
+                shift
+                ;;
+            --auto-changelog)
+                auto_changelog="true"
                 shift
                 ;;
             -h|--help)
@@ -344,7 +363,7 @@ main() {
     fi
     
     print_step "Updating CHANGELOG.md..."
-    update_changelog "$new_version" "$dry_run"
+    update_changelog "$new_version" "$dry_run" "$auto_changelog"
     
     print_step "Committing changes..."
     commit_changes "$new_version" "$dry_run"
