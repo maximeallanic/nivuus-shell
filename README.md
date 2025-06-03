@@ -19,10 +19,10 @@ Ultra-fast, modular, and intelligent shell environment with advanced Vim integra
 
 ```bash
 # Download and install for current user
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/install.sh | bash
 
 # Download and install system-wide (all users)
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/main/install.sh | sudo bash --system
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/install.sh | sudo bash -s -- --system
 ```
 
 ### Manual Installation

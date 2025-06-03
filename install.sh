@@ -10,8 +10,12 @@ set -euo pipefail
 REPO_URL="https://github.com/maximeallanic/shell.git"
 VERSION="3.0.0"
 
+# Determine script location (handle both local and piped execution)
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" 2>/dev/null && pwd)" || SCRIPT_DIR=""
+
 # Auto-clone detection and setup
-if [[ ! -f "${BASH_SOURCE[0]%/*}/install/common.sh" ]]; then
+if [[ -z "$SCRIPT_DIR" ]] || [[ ! -f "$SCRIPT_DIR/install/common.sh" ]]; then
     # We're running remotely, need to clone first
     print_remote_header() {
         echo -e "\033[0;34m================================\033[0m"
@@ -60,8 +64,10 @@ if [[ ! -f "${BASH_SOURCE[0]%/*}/install/common.sh" ]]; then
     exec ./install.sh "$@"
 fi
 
-# Script directory (after potential clone)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Script directory (after potential clone or local execution)
+if [[ -z "$SCRIPT_DIR" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+fi
 
 # =============================================================================
 # LOAD MODULES

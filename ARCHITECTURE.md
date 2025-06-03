@@ -13,10 +13,10 @@ The shell configuration now uses a **single unified installer** that handles bot
 ### 📦 Single Command Installation
 ```bash
 # Works for both local and remote installation
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/install.sh | bash
 
 # System-wide installation
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/main/install.sh | sudo bash --system
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/install.sh | sudo bash -s -- --system
 ```
 
 ## Architecture
