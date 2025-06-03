@@ -1,4 +1,4 @@
-# Ultra-Modern Shell Environment
+# Nivuus Shell
 
 🚀 **Ultra-fast, intelligent, and AI-powered ZSH configuration** with advanced integrations, performance monitoring, and developer-focused features.
 
@@ -51,14 +51,14 @@
 
 ```bash
 # Install for current user (recommended)
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/master/install.sh | bash
 
 # System-wide installation (all users)
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/install.sh | sudo bash -s -- --system
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/master/install.sh | sudo bash -s -- --system
 ```
 
 **What gets installed automatically:**
-- ⚡ Ultra-fast ZSH configuration with 17 specialized modules
+- ⚡ Nivuus Shell configuration with 17 specialized modules
 - 🤖 GitHub Copilot CLI integration (if available)
 - 📦 Node.js LTS via NVM with auto-switching
 - 🎨 Modern CLI tools (eza, bat, fd, ripgrep) with smart fallbacks
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/install.
 
 ```bash
 # Clone and install locally
-git clone https://github.com/maximeallanic/shell.git && cd shell
+git clone https://github.com/maximeallanic/nivuus-shell.git && cd nivuus-shell
 ./install.sh
 
 # Non-interactive installation
@@ -332,8 +332,8 @@ shell/
 **Smart Auto-Detection:**
 - 🏠 **Local mode** - Runs directly if modules are present
 - 🌐 **Remote mode** - Auto-clones repository and re-executes
-- 👥 **User mode** - `~/.config/zsh-ultra/` (default)
-- 🏢 **System mode** - `/opt/modern-shell/` (all users)
+- 👥 **User mode** - `~/.config/nivuus-shell/` (default)
+- 🏢 **System mode** - `/opt/nivuus-shell/` (all users)
 - 🔒 **Root mode** - Minimal safe configuration for privileged access
 
 ## 🎯 System Deployment
@@ -347,7 +347,7 @@ sudo ./install.sh --system
 ```
 
 **Creates:**
-- 📁 `/opt/modern-shell/` - Main configuration directory
+- 📁 `/opt/nivuus-shell/` - Main configuration directory
 - 🎨 `/etc/vim/vimrc.modern` - System-wide vim configuration  
 - 🔧 `/etc/zsh/zshrc.d/` - ZSH integration files
 - 🌐 `/etc/profile` - Shell-agnostic environment setup
@@ -419,10 +419,10 @@ profile_zsh                 # Detailed profiling
 **One-command uninstall:**
 ```bash
 # Remove user installation
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/master/uninstall.sh | bash
 
 # Remove system installation (requires sudo)
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/uninstall.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/master/uninstall.sh | sudo bash
 ```
 
 **Local uninstall:**
@@ -435,7 +435,7 @@ sudo ./uninstall.sh         # Remove system installation
 ### What Gets Removed
 
 **Configuration Files:**
-- ✅ ZSH Ultra Performance configuration
+- ✅ Nivuus Shell configuration
 - ✅ ZSH plugins (syntax highlighting, autosuggestions)
 - ✅ ZSH cache and compiled files
 - ✅ Vim modern configurations
@@ -445,7 +445,7 @@ sudo ./uninstall.sh         # Remove system installation
 ### What Gets Preserved
 
 **Safe Backup System:**
-- 💾 **Configuration backups** in `~/.config/zsh-ultra-backup`
+- 💾 **Configuration backups** in `~/.config/nivuus-shell-backup`
 - 📦 **System packages** (unless explicitly chosen for removal)
 - 🔧 **Custom configurations** outside our scope
 - 📁 **User data** and personal files
@@ -494,7 +494,7 @@ sudo ./uninstall.sh         # Remove system installation
 
 ---
 
-### 🌟 Why Choose This Shell?
+### 🌟 Why Choose Nivuus Shell?
 
 - ⚡ **Ultra-fast** - Sub-300ms startup with performance monitoring
 - 🤖 **AI-powered** - GitHub Copilot integration for instant command help
@@ -508,5 +508,5 @@ sudo ./uninstall.sh         # Remove system installation
 **Ready to supercharge your terminal experience?**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/shell/master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/master/install.sh | bash
 ```

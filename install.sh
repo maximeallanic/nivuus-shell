@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # Repository configuration
-REPO_URL="https://github.com/maximeallanic/shell.git"
+REPO_URL="https://github.com/maximeallanic/nivuus-shell.git"
 VERSION="3.0.0"
 
 # Determine script location (handle both local and piped execution)
