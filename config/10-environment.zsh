@@ -210,18 +210,11 @@ unset __conda_setup
 # NODE.JS & NVM SETUP
 # =============================================================================
 
-# NVM setup with automatic loading for VS Code compatibility
-if [[ -d "$HOME/.nvm" ]]; then
-    export NVM_DIR="$HOME/.nvm"
-    
-    # Load NVM immediately (not lazy) for better VS Code integration
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-    
-    # Auto-use appropriate Node version
-    if [[ -f ".nvmrc" ]]; then
-        nvm use --silent 2>/dev/null || nvm use default --silent 2>/dev/null || true
-    else
-        nvm use default --silent 2>/dev/null || true
-    fi
+# NOTE: NVM configuration is handled in 16-nvm-integration.zsh
+# This section is kept for backward compatibility and environment setup
+
+# Ensure Node.js tools are in PATH if NVM is loaded
+if command -v node &> /dev/null; then
+    # Add global npm bin to PATH
+    export PATH="$(npm bin -g 2>/dev/null):$PATH" 2>/dev/null || true
 fi
