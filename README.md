@@ -64,10 +64,10 @@
 
 ```bash
 # Install for current user (recommended)
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/master/install.sh | bash
+curl -fsSL https://github.com/maximeallanic/nivuus-shell/releases/latest/download/install.sh | bash
 
 # System-wide installation (all users)
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/master/install.sh | sudo bash -s -- --system
+curl -fsSL https://github.com/maximeallanic/nivuus-shell/releases/latest/download/install.sh | sudo bash -s -- --system
 ```
 
 **What gets installed automatically:**
@@ -587,5 +587,5 @@ The test will verify:
 **Ready to supercharge your terminal experience?**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/master/install.sh | bash
+curl -fsSL https://github.com/maximeallanic/nivuus-shell/releases/latest/download/install.sh | bash
 ```
