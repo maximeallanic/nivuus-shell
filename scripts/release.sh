@@ -169,11 +169,10 @@ generate_auto_changelog() {
     local commit_range
     if [[ -n "$previous_tag" ]]; then
         commit_range="${previous_tag}..HEAD"
-        print_info "Generating changelog from ${previous_tag} to HEAD"
+        # Don't use print_info here to avoid ANSI codes in output
     else
         # If no previous tag, get all commits
         commit_range="HEAD"
-        print_info "Generating changelog from initial commit to HEAD"
     fi
     
     # Get commits with format: type(scope): message
@@ -213,8 +212,11 @@ generate_auto_changelog() {
         elif [[ "$commit_msg" =~ ^(build)(\(.+\))?:\ (.+) ]]; then
             changes+=("- 📦 ${BASH_REMATCH[3]}")
         else
-            # Generic commit message
-            changes+=("- $commit_msg")
+            # Generic commit message - clean it up
+            local clean_msg="$commit_msg"
+            # Remove any leading/trailing whitespace and special characters
+            clean_msg=$(echo "$clean_msg" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            changes+=("- $clean_msg")
         fi
     done <<< "$commits"
     
@@ -279,8 +281,18 @@ update_changelog() {
     local changelog_entries
     if [[ "$auto_changelog" == "true" ]]; then
         print_info "Generating automatic changelog from git commits..."
+        
+        # Get the latest tag for info display
+        local previous_tag
+        previous_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [[ -n "$previous_tag" ]]; then
+            print_info "Collecting commits from ${previous_tag} to HEAD"
+        else
+            print_info "Collecting commits from initial commit to HEAD"
+        fi
+        
         changelog_entries=$(generate_auto_changelog "$new_version")
-        print_info "Using automatic changelog entries based on commits"
+        print_info "Generated changelog entries based on git commits"
     else
         print_info "Collecting changelog entries..."
         changelog_entries=$(prompt_changelog_entry "$new_version")
