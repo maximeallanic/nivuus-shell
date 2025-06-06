@@ -32,6 +32,9 @@ fi
 # Disable global RCS loading for speed
 unsetopt GLOBAL_RCS
 
+# Enable null_glob to avoid "no matches found" errors
+setopt null_glob
+
 # Clean path function
 add_to_path() {
     case ":$PATH:" in

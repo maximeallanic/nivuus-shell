@@ -6,7 +6,7 @@
 export LS_COLORS="di=34:ln=36:ex=32:*.tar=31:*.gz=31:*.zip=31"
 
 # Reduce colorfulness in common tools
-export GREP_COLOR="31"  # Simple red for matches
+export GREP_COLORS="mt=31"  # Simple red for matches (updated from deprecated GREP_COLOR)
 export LESS_TERMCAP_md=$'\e[34m'    # Blue for bold
 export LESS_TERMCAP_us=$'\e[4m'     # Underline only
 export LESS_TERMCAP_so=$'\e[7m'     # Reverse video

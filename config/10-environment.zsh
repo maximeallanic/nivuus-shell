@@ -123,6 +123,17 @@ unload_env() {
 
 # Enhanced auto-env with security (silent mode)
 auto_env() {
+    # Track current directory to avoid unnecessary operations
+    local current_dir="$(pwd)"
+    
+    # Check if directory actually changed
+    if [[ -n "$_NIVUUS_LAST_ENV_PWD" && "$current_dir" == "$_NIVUUS_LAST_ENV_PWD" ]]; then
+        return 0  # Same directory, do nothing
+    fi
+    
+    # Update last directory
+    export _NIVUUS_LAST_ENV_PWD="$current_dir"
+    
     # Unload previous environment
     unload_env
     
@@ -167,7 +178,8 @@ envshow() {
 autoload -U add-zsh-hook
 add-zsh-hook chpwd auto_env
 
-# Load .env on shell start if present
+# Initialize directory tracking and load .env on shell start if present
+export _NIVUUS_LAST_ENV_PWD=""
 auto_env
 
 # =============================================================================

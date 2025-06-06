@@ -44,12 +44,15 @@ _nivuus_should_check_updates() {
 
 # Auto-check for updates on shell startup (asynchronous)
 if [[ "${NIVUUS_AUTO_UPDATE_CHECK:-true}" == "true" ]] && _nivuus_should_check_updates; then
-    # Run update check in background, don't block shell startup
-    (
-        # Small delay to not interfere with shell startup
-        sleep 2
-        _nivuus_check_updates_silent
-    ) &
+    # Run update check in background, completely silent
+    {
+        setopt LOCAL_OPTIONS NO_MONITOR
+        (
+            # Small delay to not interfere with shell startup
+            sleep 2
+            _nivuus_check_updates_silent
+        ) &>/dev/null &
+    }
 fi
 
 # Aliases

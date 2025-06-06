@@ -38,7 +38,18 @@ nvm_auto_use() {
         return 0
     fi
     
-    local nvmrc_path="$(pwd)/.nvmrc"
+    # Track current directory to avoid unnecessary operations
+    local current_dir="$(pwd)"
+    
+    # Check if directory actually changed
+    if [[ -n "$_NIVUUS_LAST_PWD" && "$current_dir" == "$_NIVUUS_LAST_PWD" ]]; then
+        return 0  # Same directory, do nothing
+    fi
+    
+    # Update last directory
+    export _NIVUUS_LAST_PWD="$current_dir"
+    
+    local nvmrc_path="$current_dir/.nvmrc"
     
     if [[ -f "$nvmrc_path" ]]; then
         local nvmrc_version="$(cat "$nvmrc_path")"
@@ -145,7 +156,8 @@ if nvm_init; then
     if [[ "$NVM_AUTO_USE" == "true" ]]; then
         chpwd_functions+=(nvm_auto_use)
         
-        # Check current directory on shell start
+        # Initialize directory tracking and check current directory on shell start
+        export _NIVUUS_LAST_PWD=""
         nvm_auto_use
     fi
     

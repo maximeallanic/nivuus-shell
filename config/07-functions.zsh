@@ -27,6 +27,17 @@ psg() {
 
 # Project type detection and smart setup
 detect_project() {
+    # Track current directory to avoid unnecessary operations
+    local current_dir="$(pwd)"
+    
+    # Check if directory actually changed
+    if [[ -n "$_NIVUUS_LAST_PROJECT_PWD" && "$current_dir" == "$_NIVUUS_LAST_PROJECT_PWD" ]]; then
+        return 0  # Same directory, do nothing
+    fi
+    
+    # Update last directory
+    export _NIVUUS_LAST_PROJECT_PWD="$current_dir"
+    
     local project_type=""
     
     if [[ -f package.json ]]; then
@@ -74,7 +85,12 @@ detect_project() {
 smart_cd() {
     builtin cd "$@"
     
-    # Detect project type
+    # Initialize project directory tracking if not set
+    if [[ -z "$_NIVUUS_LAST_PROJECT_PWD" ]]; then
+        export _NIVUUS_LAST_PROJECT_PWD=""
+    fi
+    
+    # Detect project type (will only show output if directory actually changed)
     detect_project
 }
 

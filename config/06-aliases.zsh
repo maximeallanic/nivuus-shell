@@ -26,7 +26,6 @@ elif command -v batcat &> /dev/null; then
 fi
 
 if command -v fd &> /dev/null; then
-    alias find='fd'
     alias fd='fd --hidden --follow --exclude .git'
 fi
 
@@ -102,6 +101,11 @@ alias localip='hostname -I'
 # Quick file operations
 alias mkdir='mkdir -pv'
 alias wget='wget -c'
+
+# Safe glob patterns (null_glob option for these commands)
+alias clean-logs='rm -f **/*.log **/*.tsbuildinfo **/.eslintcache'
+alias clean-cache='rm -rf node_modules/.cache .next/cache .nuxt .cache'
+alias clean-build='rm -rf dist build out .next **/*.tsbuildinfo'
 
 # Maintenance aliases
 alias healthcheck='zsh_health_check'
