@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2024-05-29
 
+## [1.0.9] - 2025-06-06
+
+### Added
+
+[0;34mℹ️  Generating changelog from v1.0.8 to HEAD[0m
+- ✨ enhance auto-changelog to use git commits
+
+
 ## [1.0.8] - 2025-06-06
 
 ### Added

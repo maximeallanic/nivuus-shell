@@ -8,7 +8,7 @@ set -euo pipefail
 
 # Repository configuration
 REPO_URL="https://github.com/maximeallanic/nivuus-shell.git"
-VERSION="1.0.8"
+VERSION="1.0.9"
 
 # Function to get latest version from GitHub
 get_latest_version() {
