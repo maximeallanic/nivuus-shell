@@ -159,6 +159,73 @@ update_install_script() {
     print_success "Updated install.sh version to $new_version"
 }
 
+generate_auto_changelog() {
+    local current_version="$1"
+    
+    # Get the latest tag (previous version)
+    local previous_tag
+    previous_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+    
+    local commit_range
+    if [[ -n "$previous_tag" ]]; then
+        commit_range="${previous_tag}..HEAD"
+        print_info "Generating changelog from ${previous_tag} to HEAD"
+    else
+        # If no previous tag, get all commits
+        commit_range="HEAD"
+        print_info "Generating changelog from initial commit to HEAD"
+    fi
+    
+    # Get commits with format: type(scope): message
+    local commits
+    commits=$(git log "$commit_range" --pretty=format:"%s" --reverse 2>/dev/null || echo "")
+    
+    if [[ -z "$commits" ]]; then
+        echo "- Bug fixes and improvements"
+        return
+    fi
+    
+    local changes=()
+    
+    # Process each commit message
+    while IFS= read -r commit_msg; do
+        [[ -z "$commit_msg" ]] && continue
+        
+        # Clean up commit message and categorize
+        if [[ "$commit_msg" =~ ^(feat|feature)(\(.+\))?:\ (.+) ]]; then
+            changes+=("- ✨ ${BASH_REMATCH[3]}")
+        elif [[ "$commit_msg" =~ ^(fix|bugfix)(\(.+\))?:\ (.+) ]]; then
+            changes+=("- 🐛 ${BASH_REMATCH[3]}")
+        elif [[ "$commit_msg" =~ ^(docs|doc)(\(.+\))?:\ (.+) ]]; then
+            changes+=("- 📚 ${BASH_REMATCH[3]}")
+        elif [[ "$commit_msg" =~ ^(perf|performance)(\(.+\))?:\ (.+) ]]; then
+            changes+=("- ⚡ ${BASH_REMATCH[3]}")
+        elif [[ "$commit_msg" =~ ^(refactor)(\(.+\))?:\ (.+) ]]; then
+            changes+=("- ♻️ ${BASH_REMATCH[3]}")
+        elif [[ "$commit_msg" =~ ^(test)(\(.+\))?:\ (.+) ]]; then
+            changes+=("- 🧪 ${BASH_REMATCH[3]}")
+        elif [[ "$commit_msg" =~ ^(chore)(\(.+\))?:\ (.+) ]]; then
+            changes+=("- 🔧 ${BASH_REMATCH[3]}")
+        elif [[ "$commit_msg" =~ ^(style)(\(.+\))?:\ (.+) ]]; then
+            changes+=("- 💄 ${BASH_REMATCH[3]}")
+        elif [[ "$commit_msg" =~ ^(ci)(\(.+\))?:\ (.+) ]]; then
+            changes+=("- 👷 ${BASH_REMATCH[3]}")
+        elif [[ "$commit_msg" =~ ^(build)(\(.+\))?:\ (.+) ]]; then
+            changes+=("- 📦 ${BASH_REMATCH[3]}")
+        else
+            # Generic commit message
+            changes+=("- $commit_msg")
+        fi
+    done <<< "$commits"
+    
+    # If no changes found, use default
+    if [[ ${#changes[@]} -eq 0 ]]; then
+        changes+=("- Bug fixes and improvements")
+    fi
+    
+    printf '%s\n' "${changes[@]}"
+}
+
 prompt_changelog_entry() {
     local version="$1"
     
@@ -211,8 +278,9 @@ update_changelog() {
     # Get changelog entries from user or auto-generate
     local changelog_entries
     if [[ "$auto_changelog" == "true" ]]; then
-        changelog_entries="- Bug fixes and improvements"
-        print_info "Using automatic changelog entry"
+        print_info "Generating automatic changelog from git commits..."
+        changelog_entries=$(generate_auto_changelog "$new_version")
+        print_info "Using automatic changelog entries based on commits"
     else
         print_info "Collecting changelog entries..."
         changelog_entries=$(prompt_changelog_entry "$new_version")
