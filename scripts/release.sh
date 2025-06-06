@@ -164,12 +164,22 @@ prompt_changelog_entry() {
     
     echo -e "${YELLOW}${BOLD}Please provide changelog entry for version $version:${NC}"
     echo -e "${YELLOW}Enter your changes (one per line, empty line to finish):${NC}"
-    echo -e "${YELLOW}Or press Ctrl+C and use --auto-changelog for automatic entries${NC}"
+    echo -e "${YELLOW}You have 30 seconds to enter changes, or use --auto-changelog flag${NC}"
+    echo
     
     local changes=()
-    while IFS= read -r line; do
-        [[ -z "$line" ]] && break
-        changes+=("- $line")
+    local timeout_duration=30
+    
+    # Read with timeout
+    while true; do
+        if read -t "$timeout_duration" -r line; then
+            [[ -z "$line" ]] && break
+            changes+=("- $line")
+            timeout_duration=10  # Shorter timeout for subsequent lines
+        else
+            print_warning "Timeout reached. Using default changelog entry."
+            break
+        fi
     done
     
     # If no entries provided, use default
@@ -193,26 +203,37 @@ update_changelog() {
         return
     fi
     
+    # Verify CHANGELOG.md exists and is readable
+    if [[ ! -f "$CHANGELOG_FILE" ]] || [[ ! -r "$CHANGELOG_FILE" ]]; then
+        print_error "CHANGELOG.md not found or not readable at $CHANGELOG_FILE"
+    fi
+    
     # Get changelog entries from user or auto-generate
     local changelog_entries
     if [[ "$auto_changelog" == "true" ]]; then
         changelog_entries="- Bug fixes and improvements"
         print_info "Using automatic changelog entry"
     else
+        print_info "Collecting changelog entries..."
         changelog_entries=$(prompt_changelog_entry "$new_version")
     fi
     
     if [[ -z "$changelog_entries" ]]; then
-        print_error "No changelog entries provided. Aborting."
+        print_warning "No changelog entries provided. Using default entry."
+        changelog_entries="- Bug fixes and improvements"
     fi
     
     # Create temporary file with new entry
     local temp_file
     temp_file=$(mktemp)
     
+    # Safely handle CHANGELOG.md structure
+    if ! head -n 8 "$CHANGELOG_FILE" > "$temp_file" 2>/dev/null; then
+        print_error "Failed to read CHANGELOG.md header"
+    fi
+    
     # Add new version entry
     {
-        head -n 8 "$CHANGELOG_FILE"  # Keep header
         echo
         echo "## [$new_version] - $date_str"
         echo
@@ -220,11 +241,19 @@ update_changelog() {
         echo
         echo "$changelog_entries"
         echo
-        tail -n +9 "$CHANGELOG_FILE"  # Add rest of file
-    } > "$temp_file"
+    } >> "$temp_file"
     
-    mv "$temp_file" "$CHANGELOG_FILE"
-    print_success "Updated CHANGELOG.md with version $new_version"
+    # Add rest of file (skip first 8 lines)
+    if ! tail -n +9 "$CHANGELOG_FILE" >> "$temp_file" 2>/dev/null; then
+        print_warning "Could not append existing changelog entries"
+    fi
+    
+    # Atomically replace the file
+    if mv "$temp_file" "$CHANGELOG_FILE"; then
+        print_success "Updated CHANGELOG.md with version $new_version"
+    else
+        print_error "Failed to update CHANGELOG.md"
+    fi
 }
 
 commit_changes() {
