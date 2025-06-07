@@ -15,6 +15,7 @@ setopt HIST_FIND_NO_DUPS
 setopt HIST_SAVE_NO_DUPS
 setopt HIST_REDUCE_BLANKS
 setopt HIST_VERIFY
+setopt NO_BANG_HIST  # Disable history expansion with !
 
 # Enhanced history search
 autoload -U up-line-or-beginning-search
