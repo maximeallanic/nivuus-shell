@@ -13,9 +13,9 @@ setopt AUTO_MENU
 setopt COMPLETE_IN_WORD
 setopt ALWAYS_TO_END
 
-# Correction
+# Correction - Disabled to prevent annoying prompts
 setopt CORRECT
-setopt CORRECT_ALL
+# setopt CORRECT_ALL
 
 # Glob
 setopt EXTENDED_GLOB

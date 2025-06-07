@@ -78,10 +78,10 @@ alias update='sudo apt update && sudo apt upgrade'
 alias search='apt search'
 alias autoremove='sudo apt autoremove'
 
-# Safety with confirmation
-alias rm='rm -i'
-alias cp='cp -i'
-alias mv='mv -i'
+# Safety with confirmation - rm confirmation disabled
+# alias rm='rm -i'  # Disabled to avoid prompts
+# alias cp='cp -i'
+# alias mv='mv -i'
 
 # Enhanced utilities
 alias grep='grep --color=auto'
