@@ -34,8 +34,23 @@ fi
 # Load local customizations if they exist
 [[ -f ~/.zsh_local ]] && source ~/.zsh_local"
     
+    # Start with the new configuration
     echo "$zshrc_content" > ~/.zshrc
-    print_success "Created new .zshrc"
+    
+    # Append preserved user configurations if they exist
+    local user_configs_file="$BACKUP_DIR/user_configs.zsh"
+    if [[ -f "$user_configs_file" ]] && [[ -s "$user_configs_file" ]]; then
+        print_step "Preserving user configurations..."
+        echo "" >> ~/.zshrc
+        echo "# =============================================================================" >> ~/.zshrc
+        echo "# PRESERVED USER CONFIGURATIONS" >> ~/.zshrc
+        echo "# =============================================================================" >> ~/.zshrc
+        echo "" >> ~/.zshrc
+        cat "$user_configs_file" >> ~/.zshrc
+        print_success "Preserved user configurations in .zshrc"
+    fi
+    
+    print_success "Created new .zshrc with preserved configurations"
 }
 
 create_local_config() {
@@ -146,11 +161,30 @@ fi'
     
     # Setup for root user first
     local root_zshrc="/root/.zshrc"
+    local root_backup_dir="/opt/modern-shell/backup/root"
+    mkdir -p "$root_backup_dir"
+    
     if [[ -f "$root_zshrc" ]]; then
         cp "$root_zshrc" "$root_zshrc.backup.$(date +%Y%m%d_%H%M%S)"
         print_warning "Backed up existing .zshrc for root"
+        
+        # Extract user configurations for root
+        extract_user_configs "$root_zshrc" "$root_backup_dir/user_configs.zsh"
     fi
+    
+    # Create new .zshrc for root
     echo "$user_config" > "$root_zshrc"
+    
+    # Append preserved configurations for root
+    if [[ -f "$root_backup_dir/user_configs.zsh" ]] && [[ -s "$root_backup_dir/user_configs.zsh" ]]; then
+        echo "" >> "$root_zshrc"
+        echo "# =============================================================================" >> "$root_zshrc"
+        echo "# PRESERVED USER CONFIGURATIONS" >> "$root_zshrc"
+        echo "# =============================================================================" >> "$root_zshrc"
+        echo "" >> "$root_zshrc"
+        cat "$root_backup_dir/user_configs.zsh" >> "$root_zshrc"
+    fi
+    
     print_success "Configured shell for user: root"
     
     # Setup for all users with home directories
@@ -158,15 +192,31 @@ fi'
         if [[ -d "$user_home" ]] && [[ -w "$user_home" ]]; then
             local username=$(basename "$user_home")
             local zshrc="$user_home/.zshrc"
+            local user_backup_dir="/opt/modern-shell/backup/$username"
+            mkdir -p "$user_backup_dir"
             
             # Backup existing .zshrc if it exists
             if [[ -f "$zshrc" ]]; then
                 cp "$zshrc" "$zshrc.backup.$(date +%Y%m%d_%H%M%S)"
                 print_warning "Backed up existing .zshrc for user $username"
+                
+                # Extract user configurations
+                extract_user_configs "$zshrc" "$user_backup_dir/user_configs.zsh"
             fi
             
             # Create new .zshrc
             echo "$user_config" > "$zshrc"
+            
+            # Append preserved configurations
+            if [[ -f "$user_backup_dir/user_configs.zsh" ]] && [[ -s "$user_backup_dir/user_configs.zsh" ]]; then
+                echo "" >> "$zshrc"
+                echo "# =============================================================================" >> "$zshrc"
+                echo "# PRESERVED USER CONFIGURATIONS" >> "$zshrc"
+                echo "# =============================================================================" >> "$zshrc"
+                echo "" >> "$zshrc"
+                cat "$user_backup_dir/user_configs.zsh" >> "$zshrc"
+            fi
+            
             chown "$(stat -c '%U:%G' "$user_home")" "$zshrc"
             
             print_success "Configured shell for user: $username"

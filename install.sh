@@ -129,6 +129,7 @@ source "$SCRIPT_DIR/install/backup.sh"
 source "$SCRIPT_DIR/install/config.sh"
 source "$SCRIPT_DIR/install/system.sh"
 source "$SCRIPT_DIR/install/verification.sh"
+source "$SCRIPT_DIR/install/update.sh"
 
 # =============================================================================
 # DEPENDENCY CHECKS

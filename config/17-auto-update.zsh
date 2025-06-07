@@ -1,60 +1,221 @@
 # =============================================================================
-# NIVUUS SHELL - AUTO UPDATE INTEGRATION
+# AUTO-UPDATE SYSTEM WITH CONFIGURATION PRESERVATION
 # =============================================================================
 
-# Auto-update configuration
-readonly NIVUUS_UPDATE_SCRIPT="$NIVUUS_ROOT/scripts/update.sh"
-readonly NIVUUS_UPDATE_CHECK_INTERVAL=86400  # 24 hours
+# Smart auto-update with configuration preservation
+smart_auto_update() {
+    local update_check_file="$HOME/.zsh_last_update_check"
+    local current_time=$(date +%s)
+    local config_dir="${ZSH_CONFIG_DIR:-$HOME/.config/zsh-ultra}"
+    
+    # Check once per week (604800 seconds)
+    if [[ -f "$update_check_file" ]]; then
+        local last_check=$(cat "$update_check_file")
+        local time_diff=$((current_time - last_check))
+        
+        if (( time_diff < 604800 )); then
+            return 0
+        fi
+    fi
+    
+    echo "$current_time" > "$update_check_file"
+    
+    # Silent background check for updates
+    (
+        if [[ -d "$config_dir/.git" ]]; then
+            cd "$config_dir" || return 1
+            
+            # Fetch latest changes silently
+            if git fetch origin main --quiet 2>/dev/null; then
+                local current_commit=$(git rev-parse HEAD)
+                local latest_commit=$(git rev-parse origin/main)
+                
+                if [[ "$current_commit" != "$latest_commit" ]]; then
+                    # Update available - create notification
+                    local notification_file="$HOME/.zsh_update_available"
+                    echo "Update available for Modern ZSH Configuration" > "$notification_file"
+                    echo "Run 'zsh_update' to update with preserved configurations" >> "$notification_file"
+                    echo "Or run 'zsh_manual_update' for manual update control" >> "$notification_file"
+                fi
+            fi
+        fi
+    ) &
+}
 
-# Function to check for updates
-nivuus-update() {
-    if [[ -x "$NIVUUS_UPDATE_SCRIPT" ]]; then
-        "$NIVUUS_UPDATE_SCRIPT" "$@"
-    else
-        echo "❌ Update script not found. Please reinstall Nivuus Shell."
+# User-friendly update command with configuration preservation
+zsh_update() {
+    local config_dir="${ZSH_CONFIG_DIR:-$HOME/.config/zsh-ultra}"
+    
+    if [[ ! -d "$config_dir" ]]; then
+        echo "Error: Configuration directory not found: $config_dir"
         return 1
     fi
-}
-
-# Function to check for updates silently (for background checks)
-_nivuus_check_updates_silent() {
-    if [[ -x "$NIVUUS_UPDATE_SCRIPT" ]]; then
-        "$NIVUUS_UPDATE_SCRIPT" --silent
-    fi
-}
-
-# Function to check if we should prompt for updates
-_nivuus_should_check_updates() {
-    local check_file="$HOME/.config/nivuus-shell/.last-update-check"
-    local current_time=$(date +%s)
-    local last_check_time
     
-    if [[ ! -f "$check_file" ]]; then
-        return 0  # Should check
+    echo "Starting smart update with configuration preservation..."
+    
+    # Create backup before update
+    local backup_dir="$HOME/.config/zsh-update-backup-$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$backup_dir"
+    
+    # Backup current .zshrc
+    if [[ -f ~/.zshrc ]]; then
+        cp ~/.zshrc "$backup_dir/zshrc.backup"
+        echo "Backed up current .zshrc"
     fi
     
-    last_check_time=$(cat "$check_file" 2>/dev/null || echo "0")
+    # Extract user configurations
+    local user_configs_file="$backup_dir/user_configs.zsh"
+    if [[ -f ~/.zshrc ]]; then
+        extract_user_configs_inline ~/.zshrc "$user_configs_file"
+    fi
     
-    if (( current_time - last_check_time > NIVUUS_UPDATE_CHECK_INTERVAL )); then
-        return 0  # Should check
+    # Perform git update
+    echo "Fetching latest updates..."
+    cd "$config_dir" || return 1
+    
+    if git pull origin main --quiet; then
+        echo "Updated configuration files"
     else
-        return 1  # Too soon
+        echo "Failed to update - check network connection"
+        return 1
     fi
-}
+    
+    # Regenerate .zshrc with preserved configurations
+    echo "Regenerating .zshrc with preserved configurations..."
+    
+    local zshrc_content="# Modern ZSH Configuration (Updated: $(date))
+# Configuration directory
+export ZSH_CONFIG_DIR=\"$config_dir\"
 
-# Auto-check for updates on shell startup (asynchronous)
-if [[ "${NIVUUS_AUTO_UPDATE_CHECK:-true}" == "true" ]] && _nivuus_should_check_updates; then
-    # Run update check in background, completely silent
-    {
-        setopt LOCAL_OPTIONS NO_MONITOR
-        (
-            # Small delay to not interfere with shell startup
-            sleep 2
-            _nivuus_check_updates_silent
-        ) &>/dev/null &
-    }
+# Load all configuration modules
+if [[ -d \"\$ZSH_CONFIG_DIR/config\" ]]; then
+    for config_file in \"\$ZSH_CONFIG_DIR\"/config/*.zsh; do
+        [[ -r \"\$config_file\" ]] && source \"\$config_file\"
+    done
 fi
 
-# Aliases
-alias nvs-update='nivuus-update'
-alias nvs-check='nivuus-update --check'
+# Load local customizations if they exist
+[[ -f ~/.zsh_local ]] && source ~/.zsh_local"
+    
+    echo "$zshrc_content" > ~/.zshrc
+    
+    # Restore user configurations
+    if [[ -f "$user_configs_file" ]] && [[ -s "$user_configs_file" ]]; then
+        echo "" >> ~/.zshrc
+        echo "# =============================================================================" >> ~/.zshrc
+        echo "# PRESERVED USER CONFIGURATIONS" >> ~/.zshrc
+        echo "# =============================================================================" >> ~/.zshrc
+        echo "" >> ~/.zshrc
+        cat "$user_configs_file" >> ~/.zshrc
+        echo "Preserved user configurations"
+    fi
+    
+    # Clean notification
+    rm -f "$HOME/.zsh_update_available"
+    
+    echo ""
+    echo "Update completed successfully!"
+    echo "Backup saved to: $backup_dir"
+    echo "Restart your terminal or run 'exec zsh' to apply changes"
+}
+
+# Inline version of extract_user_configs for auto-update
+extract_user_configs_inline() {
+    local zshrc_file="$1"
+    local output_file="$2"
+    
+    if [[ ! -f "$zshrc_file" ]]; then
+        return 0
+    fi
+    
+    local temp_file=$(mktemp)
+    local found_configs=false
+    
+    # Extract user configurations
+    while IFS= read -r line; do
+        # Skip our configuration blocks
+        if [[ "$line" =~ ^#.*Modern.*ZSH.*Configuration ]] || \
+           [[ "$line" =~ ^export.*ZSH_CONFIG_DIR ]] || \
+           [[ "$line" =~ ^\[.*-r.*config_file ]] || \
+           [[ "$line" =~ ^for.*config_file.*in ]]; then
+            continue
+        fi
+        
+        # Preserve important user configurations
+        local should_preserve=false
+        
+        # Check for various patterns that should be preserved
+        case "$line" in
+            *export*NVM_DIR*|*nvm.sh*|*bash_completion*|*gcloud*|*google-cloud-sdk*|*pyenv*|*rbenv*|*conda*|*anaconda*|*miniconda*)
+                should_preserve=true ;;
+            *export*JAVA_HOME*|*export*ANDROID*|*export*FLUTTER*|*export*DART*|*source*.bashrc*|*source*.profile*|*source*.bash_profile*)
+                should_preserve=true ;;
+            "#"*User*|"#"*Personal*|"#"*Custom*|"#"*My*|"#"*Added\ by*|"#"*The\ next\ line*|"#"*This\ line*|"#"*Enable*|"#"*Load*|"#"*Initialize*)
+                should_preserve=true ;;
+            *PRESERVED*USER*CONFIGURATIONS*)
+                should_preserve=true ;;
+        esac
+        
+        if [[ "$should_preserve" == "true" ]]; then
+            echo "$line" >> "$temp_file"
+            found_configs=true
+        fi
+    done < "$zshrc_file"
+    
+    if [[ "$found_configs" == true ]]; then
+        mv "$temp_file" "$output_file"
+    else
+        rm -f "$temp_file"
+    fi
+}
+
+# Manual update command for more control
+zsh_manual_update() {
+    echo "Manual update mode"
+    echo "This will show you what changes before applying them."
+    
+    local config_dir="${ZSH_CONFIG_DIR:-$HOME/.config/zsh-ultra}"
+    
+    if [[ ! -d "$config_dir/.git" ]]; then
+        echo "Error: Not a git repository: $config_dir"
+        return 1
+    fi
+    
+    cd "$config_dir" || return 1
+    
+    echo ""
+    echo "Current status:"
+    git status --short
+    
+    echo ""
+    echo "Available updates:"
+    git fetch origin main --quiet
+    git log --oneline HEAD..origin/main
+    
+    echo ""
+    read -p "Apply these updates? (y/N): " -n 1 -r
+    echo
+    
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        zsh_update
+    else
+        echo "Update cancelled"
+    fi
+}
+
+# Show update notification if available
+show_update_notification() {
+    local notification_file="$HOME/.zsh_update_available"
+    if [[ -f "$notification_file" ]]; then
+        echo ""
+        echo "Update notification:"
+        cat "$notification_file"
+        echo ""
+    fi
+}
+
+# Auto-run update check (silent background process)
+(smart_auto_update &) 2>/dev/null
+
+# Show notification on startup if available
+show_update_notification

@@ -25,6 +25,70 @@ psg() {
     ps aux | grep -E "(^USER|$1)" | grep -v grep
 }
 
+# Configuration management shortcuts
+config_backup() {
+    local backup_dir="$HOME/.config/zsh-manual-backup-$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$backup_dir"
+    
+    if [[ -f ~/.zshrc ]]; then
+        cp ~/.zshrc "$backup_dir/zshrc.backup"
+        echo "✅ Backed up .zshrc to $backup_dir"
+    fi
+    
+    if [[ -f ~/.zsh_local ]]; then
+        cp ~/.zsh_local "$backup_dir/zsh_local.backup"
+        echo "✅ Backed up .zsh_local to $backup_dir"
+    fi
+    
+    echo "📁 Manual backup created: $backup_dir"
+}
+
+config_restore() {
+    echo "Available backups:"
+    find "$HOME/.config" -maxdepth 1 -name "*zsh*backup*" -type d | sort
+    echo ""
+    read -p "Enter backup directory path: " backup_path
+    
+    if [[ -d "$backup_path" ]]; then
+        if [[ -f "$backup_path/zshrc.backup" ]]; then
+            cp "$backup_path/zshrc.backup" ~/.zshrc
+            echo "✅ Restored .zshrc"
+        fi
+        
+        if [[ -f "$backup_path/zsh_local.backup" ]]; then
+            cp "$backup_path/zsh_local.backup" ~/.zsh_local
+            echo "✅ Restored .zsh_local"
+        fi
+        
+        echo "🔄 Run 'source ~/.zshrc' to apply changes"
+    else
+        echo "❌ Backup directory not found"
+    fi
+}
+
+# Quick config edit
+config_edit() {
+    local editor="${EDITOR:-vim}"
+    
+    case "${1:-main}" in
+        main|zshrc)
+            $editor ~/.zshrc
+            ;;
+        local)
+            $editor ~/.zsh_local
+            ;;
+        functions)
+            $editor "${ZSH_CONFIG_DIR:-$HOME/.config/zsh-ultra}/config/07-functions.zsh"
+            ;;
+        aliases)
+            $editor "${ZSH_CONFIG_DIR:-$HOME/.config/zsh-ultra}/config/06-aliases.zsh"
+            ;;
+        *)
+            echo "Usage: config_edit [main|local|functions|aliases]"
+            ;;
+    esac
+}
+
 # Project type detection and smart setup
 detect_project() {
     # Track current directory to avoid unnecessary operations

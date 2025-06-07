@@ -1,31 +1,27 @@
 #!/bin/bash
-
-# =============================================================================
-# NIVUUS SHELL - AUTO UPDATE SYSTEM
-# =============================================================================
+# ZSH Ultra Performance Config - Smart Updater
+# Updates configuration while preserving user customizations
 
 set -euo pipefail
 
-# Colors and formatting
-readonly RED='\033[0;31m'
-readonly GREEN='\033[0;32m'
-readonly YELLOW='\033[0;33m'
-readonly BLUE='\033[0;34m'
-readonly CYAN='\033[0;36m'
-readonly NC='\033[0m' # No Color
+# Repository configuration
+REPO_URL="https://github.com/maximeallanic/nivuus-shell.git"
+VERSION="3.0.0"
 
-# Configuration
-readonly REPO_OWNER="maximeallanic"
-readonly REPO_NAME="nivuus-shell"
-readonly API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
-readonly INSTALL_URL="https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/master/install.sh"
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
 
-# Installation paths
-readonly USER_INSTALL_DIR="$HOME/.config/nivuus-shell"
-readonly SYSTEM_INSTALL_DIR="/etc/nivuus-shell"
-readonly VERSION_CHECK_FILE="$HOME/.config/nivuus-shell/.last-update-check"
+print_header() {
+    echo -e "${BLUE}================================${NC}"
+    echo -e "${BLUE}  $1${NC}"
+    echo -e "${BLUE}================================${NC}"
+}
 
-# Functions
 print_step() {
     echo -e "${CYAN}➤ $1${NC}"
 }
@@ -42,262 +38,341 @@ print_warning() {
     echo -e "${YELLOW}⚠️  $1${NC}"
 }
 
-print_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
-}
-
-get_current_version() {
-    local version_file=""
+# Detect configuration directory
+detect_config_dir() {
+    local config_dir=""
     
-    # Check development directory first (for testing)
-    if [[ -f "$(pwd)/VERSION" ]]; then
-        version_file="$(pwd)/VERSION"
-    # Check user installation
-    elif [[ -f "$USER_INSTALL_DIR/VERSION" ]]; then
-        version_file="$USER_INSTALL_DIR/VERSION"
-    elif [[ -f "$SYSTEM_INSTALL_DIR/VERSION" ]]; then
-        version_file="$SYSTEM_INSTALL_DIR/VERSION"
+    if [[ -n "${ZSH_CONFIG_DIR:-}" ]] && [[ -d "$ZSH_CONFIG_DIR" ]]; then
+        config_dir="$ZSH_CONFIG_DIR"
+    elif [[ -d "$HOME/.config/zsh-ultra" ]]; then
+        config_dir="$HOME/.config/zsh-ultra"
+    elif [[ -d "/opt/modern-shell" ]]; then
+        config_dir="/opt/modern-shell"
     else
-        echo "unknown"
-        return
+        print_error "Configuration directory not found"
+        echo "Please ensure the shell configuration is properly installed"
+        exit 1
     fi
     
-    cat "$version_file" 2>/dev/null | tr -d '\n' || echo "unknown"
+    echo "$config_dir"
 }
 
-get_latest_version() {
-    local latest_version
+# Extract user configurations from .zshrc
+extract_user_configs() {
+    local zshrc_file="$1"
+    local output_file="$2"
     
-    if command -v curl &> /dev/null; then
-        latest_version=$(curl -s "$API_URL" | grep '"tag_name":' | sed -E 's/.*"tag_name": *"v?([^"]+)".*/\1/' 2>/dev/null)
-    elif command -v wget &> /dev/null; then
-        latest_version=$(wget -qO- "$API_URL" | grep '"tag_name":' | sed -E 's/.*"tag_name": *"v?([^"]+)".*/\1/' 2>/dev/null)
-    else
-        print_error "Neither curl nor wget found. Cannot check for updates."
-        return 1
-    fi
-    
-    if [[ -z "$latest_version" ]]; then
-        print_error "Failed to fetch latest version from GitHub"
-        return 1
-    fi
-    
-    echo "$latest_version"
-}
-
-compare_versions() {
-    local version1="$1"
-    local version2="$2"
-    
-    # Convert versions to comparable format
-    local v1_major v1_minor v1_patch
-    local v2_major v2_minor v2_patch
-    
-    IFS='.' read -r v1_major v1_minor v1_patch <<< "$version1"
-    IFS='.' read -r v2_major v2_minor v2_patch <<< "$version2"
-    
-    # Convert to integers for comparison
-    v1_major=${v1_major:-0}
-    v1_minor=${v1_minor:-0}
-    v1_patch=${v1_patch:-0}
-    v2_major=${v2_major:-0}
-    v2_minor=${v2_minor:-0}
-    v2_patch=${v2_patch:-0}
-    
-    if (( v2_major > v1_major )); then
-        return 0  # v2 is newer
-    elif (( v2_major < v1_major )); then
-        return 1  # v1 is newer
-    elif (( v2_minor > v1_minor )); then
-        return 0  # v2 is newer
-    elif (( v2_minor < v1_minor )); then
-        return 1  # v1 is newer
-    elif (( v2_patch > v1_patch )); then
-        return 0  # v2 is newer
-    else
-        return 1  # v1 is newer or equal
-    fi
-}
-
-should_check_for_updates() {
-    local check_file="$VERSION_CHECK_FILE"
-    local current_time
-    local last_check_time
-    local check_interval=$((24 * 60 * 60))  # 24 hours in seconds
-    
-    current_time=$(date +%s)
-    
-    if [[ ! -f "$check_file" ]]; then
-        return 0  # Should check
-    fi
-    
-    last_check_time=$(cat "$check_file" 2>/dev/null || echo "0")
-    
-    if (( current_time - last_check_time > check_interval )); then
-        return 0  # Should check
-    else
-        return 1  # Too soon
-    fi
-}
-
-update_check_timestamp() {
-    local check_file="$VERSION_CHECK_FILE"
-    local check_dir
-    check_dir=$(dirname "$check_file")
-    
-    mkdir -p "$check_dir"
-    date +%s > "$check_file"
-}
-
-prompt_for_update() {
-    local current_version="$1"
-    local latest_version="$2"
-    
-    echo
-    print_warning "New version available!"
-    print_info "Current version: $current_version"
-    print_info "Latest version:  $latest_version"
-    echo
-    
-    read -p "Would you like to update now? (y/N): " -n 1 -r
-    echo
-    
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-perform_update() {
-    print_step "Downloading and running latest installer..."
-    
-    # Determine if we need sudo (system installation)
-    local sudo_cmd=""
-    if [[ -d "$SYSTEM_INSTALL_DIR" ]]; then
-        sudo_cmd="sudo"
-    fi
-    
-    # Download and execute installer
-    if command -v curl &> /dev/null; then
-        bash <(curl -fsSL "$INSTALL_URL") ${sudo_cmd:+--system}
-    elif command -v wget &> /dev/null; then
-        bash <(wget -qO- "$INSTALL_URL") ${sudo_cmd:+--system}
-    else
-        print_error "Neither curl nor wget found. Cannot download installer."
-        return 1
-    fi
-}
-
-check_for_updates() {
-    local force_check="$1"
-    local auto_update="$2"
-    
-    # Skip time check if forced
-    if [[ "$force_check" != "true" ]] && ! should_check_for_updates; then
+    if [[ ! -f "$zshrc_file" ]]; then
         return 0
     fi
+    
+    print_step "Extracting user configurations..."
+    
+    local temp_file=$(mktemp)
+    local found_configs=false
+    local in_preserved_section=false
+    
+    while IFS= read -r line; do
+        # Skip our configuration blocks
+        if [[ "$line" =~ ^#.*Modern.*ZSH.*Configuration ]] || \
+           [[ "$line" =~ ^export.*ZSH_CONFIG_DIR ]] || \
+           [[ "$line" =~ ^\[.*-r.*config_file ]] || \
+           [[ "$line" =~ ^for.*config_file.*in ]]; then
+            continue
+        fi
+        
+        # Detect preserved section
+        if [[ "$line" =~ ^#.*PRESERVED.*USER.*CONFIGURATIONS ]]; then
+            in_preserved_section=true
+            continue
+        fi
+        
+        # If in preserved section, include everything until next major section
+        if [[ "$in_preserved_section" == true ]]; then
+            if [[ "$line" =~ ^#.*===.*=== ]]; then
+                in_preserved_section=false
+            else
+                echo "$line" >> "$temp_file"
+                found_configs=true
+            fi
+            continue
+        fi
+        
+        # Preserve important user configurations
+        if [[ "$line" =~ ^export.*NVM_DIR ]] || \
+           [[ "$line" =~ ^\[.*-s.*nvm\.sh ]] || \
+           [[ "$line" =~ ^\[.*-s.*bash_completion ]] || \
+           [[ "$line" =~ [Gg]cloud ]] || \
+           [[ "$line" =~ google-cloud-sdk ]] || \
+           [[ "$line" =~ ^source.*google-cloud ]] || \
+           [[ "$line" =~ ^\..*google-cloud ]] || \
+           [[ "$line" =~ path\.zsh\.inc ]] || \
+           [[ "$line" =~ completion\.zsh\.inc ]] || \
+           [[ "$line" =~ ^export.*GOOGLE_CLOUD ]] || \
+           [[ "$line" =~ ^export.*GCLOUD ]] || \
+           [[ "$line" =~ ^export.*GOOGLE_APPLICATION_CREDENTIALS ]] || \
+           [[ "$line" =~ ^export.*CLOUDSDK ]] || \
+           [[ "$line" =~ ^PATH.*gcloud ]] || \
+           [[ "$line" =~ ^PATH.*google-cloud ]] || \
+           [[ "$line" =~ ^alias.*gcloud ]] || \
+           [[ "$line" =~ pyenv ]] || \
+           [[ "$line" =~ rbenv ]] || \
+           [[ "$line" =~ conda ]] || \
+           [[ "$line" =~ anaconda ]] || \
+           [[ "$line" =~ miniconda ]] || \
+           [[ "$line" =~ ^export.*JAVA_HOME ]] || \
+           [[ "$line" =~ ^export.*ANDROID ]] || \
+           [[ "$line" =~ ^export.*FLUTTER ]] || \
+           [[ "$line" =~ ^export.*DART ]] || \
+           [[ "$line" =~ ^source.*\.bashrc ]] || \
+           [[ "$line" =~ ^source.*\.profile ]] || \
+           [[ "$line" =~ ^source.*\.bash_profile ]] || \
+           [[ "$line" =~ ^alias.*ll= ]] || \
+           [[ "$line" =~ ^alias.*la= ]] || \
+           [[ "$line" =~ ^alias.*grep= ]] || \
+           [[ "$line" =~ ^# User ]] || \
+           [[ "$line" =~ ^# Personal ]] || \
+           [[ "$line" =~ ^# Custom ]] || \
+           [[ "$line" =~ ^# My ]] || \
+           [[ "$line" =~ ^# Added by ]] || \
+           [[ "$line" =~ ^# The next line ]] || \
+           [[ "$line" =~ ^# This line ]] || \
+           [[ "$line" =~ ^# Enable ]] || \
+           [[ "$line" =~ ^# Load ]] || \
+           [[ "$line" =~ ^# Initialize ]]; then
+            echo "$line" >> "$temp_file"
+            found_configs=true
+        fi
+    done < "$zshrc_file"
+    
+    if [[ "$found_configs" == true ]]; then
+        # Clean up and save to output file
+        sed '/^$/N;/^\n$/d' "$temp_file" > "$output_file"
+        rm -f "$temp_file"
+        print_success "Extracted user configurations"
+        
+        # Show what will be preserved
+        if [[ -s "$output_file" ]]; then
+            echo "Configurations to preserve:"
+            while IFS= read -r line; do
+                echo "  $line"
+            done < "$output_file"
+        fi
+        return 0
+    else
+        rm -f "$temp_file"
+        print_warning "No user configurations found to preserve"
+        return 1
+    fi
+}
+
+# Smart update function
+smart_update() {
+    print_header "Smart Update with Configuration Preservation"
+    
+    local config_dir=$(detect_config_dir)
+    print_step "Using configuration directory: $config_dir"
+    
+    # Create backup directory
+    local backup_dir="$HOME/.config/zsh-update-backup-$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$backup_dir"
+    print_step "Created backup directory: $backup_dir"
+    
+    # Backup current .zshrc
+    if [[ -f ~/.zshrc ]]; then
+        cp ~/.zshrc "$backup_dir/zshrc.backup"
+        print_success "Backed up current .zshrc"
+        
+        # Extract user configurations
+        local user_configs_file="$backup_dir/user_configs.zsh"
+        extract_user_configs ~/.zshrc "$user_configs_file"
+    fi
+    
+    # Backup .zsh_local if it exists
+    if [[ -f ~/.zsh_local ]]; then
+        cp ~/.zsh_local "$backup_dir/zsh_local.backup"
+        print_success "Backed up .zsh_local"
+    fi
+    
+    # Update configuration files
+    print_step "Updating configuration files..."
+    if [[ -d "$config_dir/.git" ]]; then
+        cd "$config_dir"
+        
+        if git pull origin main --quiet; then
+            print_success "Updated configuration files from repository"
+        else
+            print_error "Failed to update from repository"
+            return 1
+        fi
+    else
+        print_warning "Not a git repository - manual update required"
+        return 1
+    fi
+    
+    # Regenerate .zshrc with preserved configurations
+    print_step "Regenerating .zshrc with preserved configurations..."
+    
+    local zshrc_content="# Modern ZSH Configuration (Updated: $(date))
+# Configuration directory
+export ZSH_CONFIG_DIR=\"$config_dir\"
+
+# Load all configuration modules
+if [[ -d \"\$ZSH_CONFIG_DIR/config\" ]]; then
+    for config_file in \"\$ZSH_CONFIG_DIR\"/config/*.zsh; do
+        [[ -r \"\$config_file\" ]] && source \"\$config_file\"
+    done
+fi
+
+# Load local customizations if they exist
+[[ -f ~/.zsh_local ]] && source ~/.zsh_local"
+    
+    echo "$zshrc_content" > ~/.zshrc
+    
+    # Restore user configurations
+    local user_configs_file="$backup_dir/user_configs.zsh"
+    if [[ -f "$user_configs_file" ]] && [[ -s "$user_configs_file" ]]; then
+        echo "" >> ~/.zshrc
+        echo "# =============================================================================" >> ~/.zshrc
+        echo "# PRESERVED USER CONFIGURATIONS" >> ~/.zshrc
+        echo "# =============================================================================" >> ~/.zshrc
+        echo "" >> ~/.zshrc
+        cat "$user_configs_file" >> ~/.zshrc
+        print_success "Restored preserved user configurations"
+    fi
+    
+    # Update version info
+    echo "$VERSION" > "$config_dir/.version"
+    echo "$(date)" > "$config_dir/.last_update"
+    
+    print_success "Update completed successfully!"
+    echo ""
+    echo -e "${CYAN}Update Summary:${NC}"
+    echo -e "  • Configuration updated to latest version"
+    echo -e "  • User configurations preserved"
+    echo -e "  • Backup saved to: ${YELLOW}$backup_dir${NC}"
+    echo ""
+    echo -e "${CYAN}Next steps:${NC}"
+    echo -e "  1. Restart your terminal or run: ${YELLOW}exec zsh${NC}"
+    echo -e "  2. Run ${YELLOW}healthcheck${NC} to verify everything works"
+    echo ""
+}
+
+# Check for configuration changes
+check_for_changes() {
+    local config_dir=$(detect_config_dir)
+    
+    if [[ ! -d "$config_dir/.git" ]]; then
+        print_error "Configuration is not a git repository"
+        return 1
+    fi
+    
+    cd "$config_dir"
     
     print_step "Checking for updates..."
     
-    local current_version
-    local latest_version
-    
-    current_version=$(get_current_version)
-    
-    if [[ "$current_version" == "unknown" ]]; then
-        print_warning "Could not determine current version"
-        return 1
-    fi
-    
-    latest_version=$(get_latest_version)
-    if [[ $? -ne 0 ]]; then
-        return 1
-    fi
-    
-    # Update check timestamp
-    update_check_timestamp
-    
-    if compare_versions "$current_version" "$latest_version"; then
-        if [[ "$auto_update" == "true" ]]; then
-            print_info "Auto-updating from $current_version to $latest_version..."
-            perform_update
+    if git fetch origin main --quiet 2>/dev/null; then
+        local current_commit=$(git rev-parse HEAD)
+        local latest_commit=$(git rev-parse origin/main)
+        
+        if [[ "$current_commit" != "$latest_commit" ]]; then
+            echo ""
+            echo -e "${GREEN}Updates available!${NC}"
+            echo ""
+            echo "Recent changes:"
+            git log --oneline --graph HEAD..origin/main
+            echo ""
+            return 0
         else
-            if prompt_for_update "$current_version" "$latest_version"; then
-                perform_update
-            else
-                print_info "Update skipped. You can update later with: nivuus-shell-update"
-            fi
+            print_success "Configuration is up to date"
+            return 1
         fi
     else
-        if [[ "$force_check" == "true" ]]; then
-            print_success "You are running the latest version ($current_version)"
-        fi
+        print_error "Failed to check for updates"
+        return 1
     fi
 }
 
-show_usage() {
-    echo "Nivuus Shell Update Manager"
-    echo
-    echo "Usage: $0 [options]"
-    echo
-    echo "Options:"
-    echo "  --check       Force check for updates"
-    echo "  --auto        Automatically update if new version available"
-    echo "  --silent      Check silently (no output unless update available)"
-    echo "  --help        Show this help message"
-    echo
+# Show help
+show_help() {
+    echo "ZSH Ultra Performance Config - Smart Updater v$VERSION"
+    echo ""
+    echo "Usage: $0 [command]"
+    echo ""
+    echo "Commands:"
+    echo "  update       Perform smart update with configuration preservation"
+    echo "  check        Check for available updates"
+    echo "  status       Show current configuration status"
+    echo "  help         Show this help message"
+    echo ""
     echo "Examples:"
-    echo "  $0              # Check for updates and prompt"
-    echo "  $0 --check     # Force check even if recently checked"
-    echo "  $0 --auto      # Auto-update without prompting"
-    echo "  $0 --silent    # Silent check (for cron jobs)"
+    echo "  $0 update    # Update configuration preserving user settings"
+    echo "  $0 check     # Check if updates are available"
+    echo ""
 }
 
+# Show status
+show_status() {
+    local config_dir=$(detect_config_dir)
+    
+    print_header "Configuration Status"
+    
+    echo -e "${CYAN}Configuration Directory:${NC} $config_dir"
+    
+    if [[ -f "$config_dir/.version" ]]; then
+        local installed_version=$(cat "$config_dir/.version")
+        echo -e "${CYAN}Installed Version:${NC} $installed_version"
+    else
+        echo -e "${CYAN}Installed Version:${NC} Unknown"
+    fi
+    
+    if [[ -f "$config_dir/.last_update" ]]; then
+        local last_update=$(cat "$config_dir/.last_update")
+        echo -e "${CYAN}Last Update:${NC} $last_update"
+    else
+        echo -e "${CYAN}Last Update:${NC} Unknown"
+    fi
+    
+    if [[ -d "$config_dir/.git" ]]; then
+        cd "$config_dir"
+        local current_commit=$(git rev-parse --short HEAD)
+        echo -e "${CYAN}Current Commit:${NC} $current_commit"
+        
+        local branch=$(git rev-parse --abbrev-ref HEAD)
+        echo -e "${CYAN}Branch:${NC} $branch"
+    fi
+    
+    echo ""
+}
+
+# Main function
 main() {
-    local force_check="false"
-    local auto_update="false"
-    local silent="false"
-    
-    # Parse arguments
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --check)
-                force_check="true"
-                shift
-                ;;
-            --auto)
-                auto_update="true"
-                shift
-                ;;
-            --silent)
-                silent="true"
-                shift
-                ;;
-            --help|-h)
-                show_usage
-                exit 0
-                ;;
-            *)
-                print_error "Unknown option: $1"
-                show_usage
-                exit 1
-                ;;
-        esac
-    done
-    
-    # Redirect output if silent mode
-    if [[ "$silent" == "true" ]]; then
-        exec 3>&1 4>&2
-        exec 1>/dev/null 2>/dev/null
-    fi
-    
-    check_for_updates "$force_check" "$auto_update"
-    
-    # Restore output if silent mode
-    if [[ "$silent" == "true" ]]; then
-        exec 1>&3 2>&4
-    fi
+    case "${1:-update}" in
+        update)
+            smart_update
+            ;;
+        check)
+            if check_for_changes; then
+                echo ""
+                read -p "Apply updates? (y/N): " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    smart_update
+                fi
+            fi
+            ;;
+        status)
+            show_status
+            ;;
+        help|--help|-h)
+            show_help
+            ;;
+        *)
+            print_error "Unknown command: $1"
+            show_help
+            exit 1
+            ;;
+    esac
 }
 
 main "$@"
