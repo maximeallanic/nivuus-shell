@@ -32,6 +32,7 @@ smart_maintenance() {
         
         if (( removed > 0 )); then
             # Silent removal - no echo for startup performance
+            true
         fi
     fi
     
@@ -40,8 +41,8 @@ smart_maintenance() {
     [ -d "${XDG_RUNTIME_DIR:-/tmp}/firebase_cache_$USER" ] && rm -rf "${XDG_RUNTIME_DIR:-/tmp}/firebase_cache_$USER" 2>/dev/null || true
     find /tmp -maxdepth 1 -name '.env_backup_*' -type f -delete 2>/dev/null || true
     
-    # Rebuild completion if old
-    if [[ -f ~/.zcompdump ]]; then
+    # Rebuild completion if old - only in zsh
+    if [[ -n "$ZSH_VERSION" && -f ~/.zcompdump ]]; then
         local dump_age=$(( current_time - $(stat -c %Y ~/.zcompdump 2>/dev/null || echo 0) ))
         if (( dump_age > 604800 )); then  # 1 week
             autoload -U compinit
@@ -69,8 +70,10 @@ zsh_cleanup() {
         
         if (( removed > 0 )); then
             # Silent removal - logged for manual cleanup only
+            true
         else
             # Silent - no duplicates found
+            true
         fi
     fi
     
@@ -81,11 +84,13 @@ zsh_cleanup() {
     rm -f /tmp/.env_backup_* 2>/dev/null
     echo "✅ Temporary files cleaned"
     
-    # Rebuild completion
-    echo "🔄 Rebuilding completions..."
-    autoload -U compinit
-    compinit -d ~/.zcompdump
-    echo "✅ Completions rebuilt"
+    # Rebuild completion - only in zsh
+    if [[ -n "$ZSH_VERSION" ]]; then
+        echo "🔄 Rebuilding completions..."
+        autoload -U compinit
+        compinit -d ~/.zcompdump
+        echo "✅ Completions rebuilt"
+    fi
     
     echo ""
     echo "🎉 Cleanup complete!"

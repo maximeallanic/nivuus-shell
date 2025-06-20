@@ -29,11 +29,14 @@ fi
 # Remove corrupted cache files
 [ -f "$HOME/.antigen/init.zsh.zwc" ] && [ ! -r "$HOME/.antigen/init.zsh.zwc" ] && rm -f "$HOME/.antigen/init.zsh.zwc"
 
-# Disable global RCS loading for speed
-unsetopt GLOBAL_RCS
-
-# Enable null_glob to avoid "no matches found" errors
-setopt null_glob
+# Zsh-specific optimizations
+if [[ -n "$ZSH_VERSION" ]]; then
+    # Disable global RCS loading for speed
+    unsetopt GLOBAL_RCS
+    
+    # Enable null_glob to avoid "no matches found" errors
+    setopt null_glob
+fi
 
 # Clean path function
 add_to_path() {

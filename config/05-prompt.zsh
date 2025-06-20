@@ -2,9 +2,11 @@
 # SYNCHRONOUS PROMPT FOR RELIABILITY
 # =============================================================================
 
-# Enable colors and synchronous prompt
-autoload -U colors && colors
-setopt PROMPT_SUBST
+# Enable colors and synchronous prompt - only in zsh
+if [[ -n "$ZSH_VERSION" ]]; then
+    autoload -U colors && colors
+    setopt PROMPT_SUBST
+fi
 
 # SSH detection (cached)
 is_ssh() {
@@ -51,35 +53,37 @@ prompt_firebase() {
     fi
 }
 
-# Synchronous prompt building
-build_prompt() {
-    local prompt_parts=()
-    
-    # SSH indicator
-    if is_ssh; then
-        prompt_parts+=("%{$fg_bold[grey]%}[%{$fg_bold[blue]%}\$(hostname)%{$fg_bold[grey]%}]%{$reset_color%} ")
-    fi
-    
-    # Root indicator
-    if [[ "$(whoami)" == "root" ]]; then
-        prompt_parts+=("%{$fg[red]%}#%{$reset_color%} ")
-    fi
-    
-    # Status indicator
-    prompt_parts+=("%(?:%{$fg_bold[green]%}>:%{$fg_bold[red]%}>) ")
-    
-    # Path
-    prompt_parts+=("%{$fg[cyan]%}%~%{$reset_color%}")
-    
-    # Firebase and Git (synchronous)
-    prompt_parts+=("\$(prompt_firebase)\$(git_prompt_info) ")
-    
-    echo "${(j::)prompt_parts}"
-}
+# Synchronous prompt building - only in zsh
+if [[ -n "$ZSH_VERSION" ]]; then
+    build_prompt() {
+        local prompt_parts=()
+        
+        # SSH indicator
+        if is_ssh; then
+            prompt_parts+=("%{$fg_bold[grey]%}[%{$fg_bold[blue]%}\$(hostname)%{$fg_bold[grey]%}]%{$reset_color%} ")
+        fi
+        
+        # Root indicator
+        if [[ "$(whoami)" == "root" ]]; then
+            prompt_parts+=("%{$fg[red]%}#%{$reset_color%} ")
+        fi
+        
+        # Status indicator
+        prompt_parts+=("%(?:%{$fg_bold[green]%}>:%{$fg_bold[red]%}>) ")
+        
+        # Path
+        prompt_parts+=("%{$fg[cyan]%}%~%{$reset_color%}")
+        
+        # Firebase and Git (synchronous)
+        prompt_parts+=("\$(prompt_firebase)\$(git_prompt_info) ")
+        
+        echo "${(j::)prompt_parts}"
+    }
 
-# Set the ultimate prompt
-PROMPT=$(build_prompt)
+    # Set the ultimate prompt
+    PROMPT=$(build_prompt)
 
-# Ensure our prompt is not overridden by external tools
-export VIRTUAL_ENV_DISABLE_PROMPT=1
-export CONDA_CHANGEPS1=false
+    # Ensure our prompt is not overridden by external tools
+    export VIRTUAL_ENV_DISABLE_PROMPT=1
+    export CONDA_CHANGEPS1=false
+fi

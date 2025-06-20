@@ -177,9 +177,11 @@ envshow() {
     done
 }
 
-# Hook to run on directory change
-autoload -U add-zsh-hook
-add-zsh-hook chpwd auto_env
+# Hook to run on directory change - only in zsh
+if [[ -n "$ZSH_VERSION" ]]; then
+    autoload -U add-zsh-hook
+    add-zsh-hook chpwd auto_env
+fi
 
 # Initialize directory tracking and load .env on shell start if present
 export _NIVUUS_LAST_ENV_PWD=""
@@ -206,20 +208,22 @@ export LESSHISTFILE='-'
 # =============================================================================
 
 # Conda setup (lazy loading for performance - without prompt modification)
-__conda_setup="$('/usr/local/miniforge3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-    # Disable conda prompt modification
-    conda config --set changeps1 False 2>/dev/null
-else
-    if [ -f "/usr/local/miniforge3/etc/profile.d/conda.sh" ]; then
-        . "/usr/local/miniforge3/etc/profile.d/conda.sh"
+if [[ -f "/usr/local/miniforge3/bin/conda" ]]; then
+    __conda_setup="$('/usr/local/miniforge3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__conda_setup"
+        # Disable conda prompt modification
         conda config --set changeps1 False 2>/dev/null
     else
-        export PATH="/usr/local/miniforge3/bin:$PATH"
+        if [ -f "/usr/local/miniforge3/etc/profile.d/conda.sh" ]; then
+            . "/usr/local/miniforge3/etc/profile.d/conda.sh"
+            conda config --set changeps1 False 2>/dev/null
+        else
+            export PATH="/usr/local/miniforge3/bin:$PATH"
+        fi
     fi
+    unset __conda_setup
 fi
-unset __conda_setup
 
 # =============================================================================
 # NODE.JS & NVM SETUP
