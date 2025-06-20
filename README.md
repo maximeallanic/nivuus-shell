@@ -12,9 +12,9 @@
 
 ### ⚡ **Ultra-Performance**
 - **Sub-300ms startup** - Lightning-fast shell initialization
-- **Async prompt** - Non-blocking git status and performance indicators
+- **Synchronous prompt** - Reliable git status and performance indicators
 - **Smart caching** - Intelligent completion and module caching
-- **Background maintenance** - Auto-cleanup and optimization
+- **Manual maintenance** - On-demand cleanup and optimization
 - **Performance monitoring** - Real-time benchmarking and profiling
 
 ### 🎨 **Modern Vim Integration**
@@ -337,7 +337,7 @@ shell/
 │   ├── 02-history.zsh                 # Advanced history management
 │   ├── 03-completion.zsh              # Smart auto-completion system
 │   ├── 04-keybindings.zsh             # Enhanced keyboard shortcuts
-│   ├── 05-prompt.zsh                  # Async prompt with git status
+│   ├── 05-prompt.zsh                  # Synchronous prompt with git status
 │   ├── 06-aliases.zsh                 # Modern command aliases
 │   ├── 07-functions.zsh               # 50+ utility functions
 │   ├── 08-ai-integration.zsh          # GitHub Copilot CLI integration

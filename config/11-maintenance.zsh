@@ -108,14 +108,12 @@ check_updates() {
     
     echo "$current_time" > "$update_check_file"
     
-    # Check for system updates (non-blocking)
-    (
-        if command -v apt >/dev/null 2>&1; then
-            apt list --upgradable 2>/dev/null | wc -l > /tmp/.zsh_updates_count
-        fi
-    ) &
+    # Check for system updates (synchronous)
+    if command -v apt >/dev/null 2>&1; then
+        apt list --upgradable 2>/dev/null | wc -l > /tmp/.zsh_updates_count
+    fi
 }
 
-# Auto-run maintenance checks on startup (non-blocking)
-(check_updates &)
-(smart_maintenance &)
+# Maintenance checks disabled (no auto-run)
+# (check_updates &)
+# (smart_maintenance &)

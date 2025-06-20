@@ -2,8 +2,11 @@
 # SECURE ENVIRONMENT MANAGEMENT
 # =============================================================================
 
-# Ensure ~/.local/bin is in PATH for user-installed tools
-export PATH="$HOME/.local/bin:$PATH"
+# PATH is already fixed in 00-vscode-integration.zsh
+# Just ensure additional paths are available
+
+# Add common Linux binary directories if they exist
+[[ -d "/usr/local/sbin" ]] && export PATH="/usr/local/sbin:$PATH"
 
 # Global environment validation settings
 export ENV_VALIDATION_SILENT=true  # Set to false to see validation messages
@@ -226,7 +229,7 @@ unset __conda_setup
 # This section is kept for backward compatibility and environment setup
 
 # Ensure Node.js tools are in PATH if NVM is loaded
-if command -v node &> /dev/null; then
-    # Add global npm bin to PATH
-    export PATH="$(npm bin -g 2>/dev/null):$PATH" 2>/dev/null || true
-fi
+# if command -v node &> /dev/null; then
+#     # Add global npm bin to PATH
+#     export PATH="$(npm bin -g 2>/dev/null):$PATH" 2>/dev/null || true
+# fi

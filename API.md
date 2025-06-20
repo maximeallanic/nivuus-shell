@@ -169,9 +169,9 @@ profile_zsh
 
 ### Prompt Features
 
-#### Asynchronous Git Status
+#### Synchronous Git Status
 
-Real-time git branch and status display without blocking prompt.
+Real-time git branch and status display with blocking execution for reliability.
 
 #### Performance Monitoring
 
@@ -205,7 +205,7 @@ Intelligent path truncation and highlighting.
 2. **History** - Command history configuration
 3. **Completion** - Tab completion system
 4. **Keybindings** - Keyboard shortcuts
-5. **Prompt** - Asynchronous prompt
+5. **Prompt** - Synchronous prompt
 6. **Aliases** - Command aliases
 7. **Functions** - Utility functions
 8. **AI Integration** - GitHub Copilot
@@ -259,7 +259,7 @@ source ~/.zshrc
 
 ### Performance Tips
 
-1. Use `zsh-defer` for non-critical operations
+1. Avoid background processes for better reliability
 2. Enable completion caching
-3. Minimize synchronous operations in prompt
-4. Use background processes for heavy tasks
+3. Minimize synchronous operations in prompt  
+4. Use manual processes for maintenance tasks

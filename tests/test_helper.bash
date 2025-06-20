@@ -71,6 +71,12 @@ assert_contains() {
     }
 }
 
+# Fail function for BATS tests
+fail() {
+    echo "$1"
+    return 1
+}
+
 # Performance measurement
 measure_startup_time() {
     local config_file="$1"

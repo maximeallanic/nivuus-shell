@@ -20,26 +20,9 @@ smart_auto_update() {
     
     echo "$current_time" > "$update_check_file"
     
-    # Silent background check for updates
-    (
-        if [[ -d "$config_dir/.git" ]]; then
-            cd "$config_dir" || return 1
-            
-            # Fetch latest changes silently
-            if git fetch origin main --quiet 2>/dev/null; then
-                local current_commit=$(git rev-parse HEAD)
-                local latest_commit=$(git rev-parse origin/main)
-                
-                if [[ "$current_commit" != "$latest_commit" ]]; then
-                    # Update available - create notification
-                    local notification_file="$HOME/.zsh_update_available"
-                    echo "Update available for Modern ZSH Configuration" > "$notification_file"
-                    echo "Run 'zsh_update' to update with preserved configurations" >> "$notification_file"
-                    echo "Or run 'zsh_manual_update' for manual update control" >> "$notification_file"
-                fi
-            fi
-        fi
-    ) &
+    # Synchronous check for updates (disabled for performance)
+    # Auto-update functionality disabled to prevent async operations
+    return 0
 }
 
 # User-friendly update command with configuration preservation
@@ -214,8 +197,8 @@ show_update_notification() {
     fi
 }
 
-# Auto-run update check (silent background process)
-(smart_auto_update &) 2>/dev/null
+# Auto-update disabled (no background processes)
+# (smart_auto_update &) 2>/dev/null
 
 # Show notification on startup if available
 show_update_notification

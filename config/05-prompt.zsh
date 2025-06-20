@@ -1,8 +1,8 @@
 # =============================================================================
-# ASYNC PROMPT FOR ULTRA PERFORMANCE
+# SYNCHRONOUS PROMPT FOR RELIABILITY
 # =============================================================================
 
-# Enable colors and async prompt
+# Enable colors and synchronous prompt
 autoload -U colors && colors
 setopt PROMPT_SUBST
 
@@ -11,19 +11,19 @@ is_ssh() {
     [[ -n "$SSH_CLIENT" ]] || [[ -n "$SSH_TTY" ]] || [[ "$SESSION_TYPE" == "remote/ssh" ]]
 }
 
-# Async git information (lightning fast)
+# Synchronous git information (blocking but reliable)
 git_prompt_info() {
     local git_info=""
     
-    # Quick git check
+    # Git check
     if git rev-parse --git-dir &>/dev/null; then
         local branch=""
         local dirty=""
         
-        # Get branch name efficiently
+        # Get branch name
         branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
         
-        # Quick dirty check (non-blocking)
+        # Dirty check (blocking)
         if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
             dirty="%{$reset_color%}%{$fg_bold[blue]%})%{$reset_color%}%{$fg[red]%}x%{$reset_color%}"
         else
@@ -36,36 +36,22 @@ git_prompt_info() {
     echo "$git_info"
 }
 
-# Enhanced Firebase detection with caching
+# Firebase detection without caching (synchronous)
 prompt_firebase() {
-    # Use user-specific cache directory to avoid permission issues
-    local cache_dir="${XDG_RUNTIME_DIR:-/tmp}/firebase_cache_$USER"
-    [[ ! -d "$cache_dir" ]] && mkdir -p "$cache_dir"
-    
-    local cache_file="$cache_dir/firebase_cache_$(pwd | tr '/' '_')"
     local current_dir=$(pwd)
     
-    # Use cache if recent (5 minutes)
-    if [[ -f $cache_file && $cache_file -nt $current_dir && $(($(date +%s) - $(stat -c %Y $cache_file 2>/dev/null || echo 0))) -lt 300 ]]; then
-        cat "$cache_file" 2>/dev/null
-        return
-    fi
-    
-    # Get Firebase project with timeout
+    # Get Firebase project synchronously
     local fb_project=""
     if [[ -f ~/.config/configstore/firebase-tools.json ]]; then
-        fb_project=$(timeout 0.1 jq -r --arg dir "$current_dir" '.activeProjects[$dir] // empty' ~/.config/configstore/firebase-tools.json 2>/dev/null)
+        fb_project=$(jq -r --arg dir "$current_dir" '.activeProjects[$dir] // empty' ~/.config/configstore/firebase-tools.json 2>/dev/null)
     fi
     
     if [[ -n $fb_project ]]; then
-        echo " %F{yellow}[$fb_project]%f" > "$cache_file" 2>/dev/null
         echo " %F{yellow}[$fb_project]%f"
-    else
-        echo "" > "$cache_file" 2>/dev/null
     fi
 }
 
-# Ultra-fast prompt building
+# Synchronous prompt building
 build_prompt() {
     local prompt_parts=()
     
@@ -85,7 +71,7 @@ build_prompt() {
     # Path
     prompt_parts+=("%{$fg[cyan]%}%~%{$reset_color%}")
     
-    # Firebase and Git (async)
+    # Firebase and Git (synchronous)
     prompt_parts+=("\$(prompt_firebase)\$(git_prompt_info) ")
     
     echo "${(j::)prompt_parts}"
