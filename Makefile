@@ -22,14 +22,43 @@ uninstall: ## Uninstall the ZSH configuration
 	@echo "🗑️  Uninstalling ZSH Ultra Performance Config..."
 	@$(UNINSTALL_SCRIPT)
 
-test: ## Test the configuration syntax
-	@echo "🧪 Testing ZSH configuration syntax..."
+test: ## Run the complete test suite
+	@echo "🧪 Running complete test suite..."
+	@./test-runner.sh all
+
+test-unit: ## Run unit tests only
+	@echo "🔬 Running unit tests..."
+	@./test-runner.sh unit
+
+test-integration: ## Run integration tests only
+	@echo "🔗 Running integration tests..."
+	@./test-runner.sh integration
+
+test-performance: ## Run performance benchmarks
+	@echo "⚡ Running performance tests..."
+	@./test-runner.sh performance
+
+test-compatibility: ## Run compatibility tests
+	@echo "🌐 Running compatibility tests..."
+	@./test-runner.sh compatibility
+
+test-syntax: ## Test configuration syntax only
+	@echo "📝 Testing ZSH configuration syntax..."
 	@zsh -n .zshrc && echo "✅ Main config syntax OK"
 	@for file in config/*.zsh; do \
 		echo "Testing $$file..."; \
 		zsh -n "$$file" || exit 1; \
 	done
 	@echo "✅ All modules syntax OK"
+
+test-nodejs: ## Run Node.js specific tests
+	@echo "📦 Running Node.js/npm tests..."
+	@./test-runner.sh unit
+	@bats tests/unit/test_nodejs.bats tests/integration/test_nodejs_full.bats tests/performance/test_nodejs_perf.bats -t
+
+test-report: ## Run tests and generate detailed report
+	@echo "📊 Running tests with report generation..."
+	@./test-runner.sh all --report
 
 backup: ## Create a backup of current ZSH config
 	@echo "💾 Creating backup..."
