@@ -109,9 +109,14 @@ PROJECT_ROOT="$(dirname "$INSTALL_MODULE_DIR")"
 [[ -z "${NON_INTERACTIVE:-}" ]] && NON_INTERACTIVE=false
 [[ -z "${SYSTEM_WIDE:-}" ]] && SYSTEM_WIDE=false
 
-# Debug and logging variables (only set if not already defined)
-[[ -z "${DEBUG_MODE:-}" ]] && DEBUG_MODE=false
-[[ -z "${VERBOSE_MODE:-}" ]] && VERBOSE_MODE=false
+# Debug and logging variables (only set if not already defined or if currently false)
+# Preserve existing true values
+if [[ "${DEBUG_MODE:-false}" != "true" ]]; then
+    DEBUG_MODE=false
+fi
+if [[ "${VERBOSE_MODE:-false}" != "true" ]]; then
+    VERBOSE_MODE=false
+fi
 LOG_FILE=""
 INSTALL_LOG=""
 

@@ -203,10 +203,52 @@ source "$SCRIPT_DIR/install/common.sh"
 
 # Initialize logging with original arguments (before parsing)
 original_args=("$@")
+
+# Parse debug arguments properly
+remaining_args=()
+for arg in "${original_args[@]}"; do
+    case $arg in
+        --debug)
+            DEBUG_MODE=true
+            VERBOSE_MODE=true
+            ;;
+        --verbose|-v)
+            VERBOSE_MODE=true
+            ;;
+        --log-file)
+            # We need to handle the next argument too
+            remaining_args+=("$arg")
+            ;;
+        *)
+            remaining_args+=("$arg")
+            ;;
+    esac
+done
+
+# Handle --log-file separately
+temp_args=("${remaining_args[@]}")
+remaining_args=()
+skip_next=false
+for arg in "${temp_args[@]}"; do
+    if [[ "$skip_next" == true ]]; then
+        skip_next=false
+        continue
+    fi
+    case $arg in
+        --log-file)
+            skip_next=true
+            ;;
+        *)
+            remaining_args+=("$arg")
+            ;;
+    esac
+done
+
+# Initialize logging after parsing
 init_logging
 
-# Parse debug arguments and get remaining arguments
-mapfile -t remaining_args < <(parse_debug_args "${original_args[@]}")
+# Export debug variables for modules
+export DEBUG_MODE VERBOSE_MODE
 
 print_debug "Script directory: $SCRIPT_DIR"
 print_debug "Remaining arguments: ${remaining_args[*]}"
@@ -406,7 +448,7 @@ fix_problematic_environment() {
         echo "👤 Fixed USER: $USER" >&2
     fi
     
-    # Fix missing HOME
+    # Fix missing HOME  
     if [[ -z "$HOME" ]] || [[ ! -d "$HOME" ]]; then
         if [[ "$USER" == "root" ]]; then
             export HOME="/root"
@@ -418,7 +460,7 @@ fix_problematic_environment() {
     fi
     
     # Detect problematic sudo/su environment
-    if [[ -n "$SUDO_USER" ]] || [[ -n "$SUDO_UID" ]] || [[ "$PATH" == "/usr/bin:/bin" ]]; then
+    if [[ -n "${SUDO_USER:-}" ]] || [[ -n "${SUDO_UID:-}" ]] || [[ "$PATH" == "/usr/bin:/bin" ]]; then
         export FORCE_ROOT_SAFE=1
         export MINIMAL_MODE=1
         ((fixes_applied++))
@@ -428,8 +470,7 @@ fix_problematic_environment() {
     [[ $fixes_applied -gt 0 ]] && echo "✅ Applied $fixes_applied environment fixes" >&2
 }
 
-# Apply environment fixes immediately
-fix_problematic_environment
+# Apply environment fixes - moved to proper execution flow
 
 main() {
     print_header "Modern ZSH Configuration Installer v$VERSION"
@@ -476,7 +517,25 @@ show_help() {
     echo ""
 }
 
-# Parse command line arguments (skip already parsed debug args)
+# Trap to generate debug report on failure - but only for actual failures
+# shellcheck disable=SC2154
+trap 'exit_code=$?; if [[ $exit_code -ne 0 ]]; then 
+    print_error "Installation failed!"
+    print_error "Debug information:"
+    print_error "- Exit code: $exit_code"
+    print_error "- Last command: $BASH_COMMAND"
+    print_error "- Log file: $LOG_FILE"
+    if [[ "$DEBUG_MODE" == true ]]; then
+        print_error "Generating debug report..."
+        generate_debug_report
+    else
+        print_error "Run with --debug for detailed troubleshooting information"
+        print_error "Or run: $0 --generate-report"
+    fi
+    exit $exit_code
+fi' EXIT
+
+# Parse command line arguments (use remaining args from debug parsing)
 set -- "${remaining_args[@]}"
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -529,24 +588,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Trap to generate debug report on failure - but only for actual failures
-# shellcheck disable=SC2154
-trap 'exit_code=$?; if [[ $exit_code -ne 0 ]]; then 
-    print_error "Installation failed!"
-    print_error "Debug information:"
-    print_error "- Exit code: $exit_code"
-    print_error "- Last command: $BASH_COMMAND"
-    print_error "- Log file: $LOG_FILE"
-    if [[ "$DEBUG_MODE" == true ]]; then
-        print_error "Generating debug report..."
-        generate_debug_report
-    else
-        print_error "Run with --debug for detailed troubleshooting information"
-        print_error "Or run: $0 --generate-report"
-    fi
-    exit $exit_code
-fi' EXIT
-
 # Update directories based on final mode
 if [[ "$SYSTEM_WIDE" == true ]]; then
     INSTALL_DIR="/opt/modern-shell"
@@ -558,6 +599,9 @@ fi
 
 # Export variables for modules
 export INSTALL_DIR BACKUP_DIR NON_INTERACTIVE SYSTEM_WIDE
+
+# Apply environment fixes before running main installation
+fix_problematic_environment
 
 # Run main installation
 main
