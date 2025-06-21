@@ -23,7 +23,7 @@ export LC_MEASUREMENT=C.UTF-8
 export LC_IDENTIFICATION=C.UTF-8
 
 # Root protection and antigen disabling
-if [[ $EUID -eq 0 ]] || [[ $UID -eq 0 ]] || [[ "$(whoami 2>/dev/null)" == "root" ]] || [[ "$USER" == "root" ]] || [[ "$HOME" == "/root" ]]; then
+if [[ $EUID -eq 0 ]] || [[ $UID -eq 0 ]] || [[ "$(whoami 2>/dev/null)" == "root" ]] || [[ "${USER:-}" == "root" ]] || [[ "${HOME:-}" == "/root" ]]; then
     export ANTIGEN_DISABLE=1
     export ANTIGEN_DISABLE_CACHE=1
     export ANTIGEN_CACHE_DIR="/dev/null"
@@ -41,12 +41,10 @@ while [[ $# -gt 0 ]]; do
         --debug)
             DEBUG_MODE=true
             VERBOSE_MODE=true
-            echo "🐛 Debug mode enabled" >&2
             shift
             ;;
         --verbose|-v)
             VERBOSE_MODE=true
-            echo "📝 Verbose mode enabled" >&2
             shift
             ;;
         *)
@@ -57,7 +55,7 @@ done
 
 # Repository configuration
 REPO_URL="https://github.com/maximeallanic/nivuus-shell.git"
-VERSION="1.2.11"
+VERSION="1.2.12"
 
 # Function to get latest version from GitHub
 get_latest_version() {
@@ -432,42 +430,53 @@ install_system_mode() {
 fix_problematic_environment() {
     local fixes_applied=0
     
+    # Robust arithmetic increment function
+    increment_fixes() {
+        fixes_applied=$((fixes_applied + 1)) 2>/dev/null || {
+            fixes_applied=$(expr ${fixes_applied:-0} + 1 2>/dev/null) || {
+                fixes_applied=1
+            }
+        }
+    }
+    
     # Fix locale issues more aggressively
-    if [[ -z "$LANG" ]] || [[ "$LANG" == "C" ]] || [[ "$LANG" == "POSIX" ]]; then
+    if [[ -z "${LANG:-}" ]] || [[ "${LANG:-}" == "C" ]] || [[ "${LANG:-}" == "POSIX" ]]; then
         export LANG=C.UTF-8
         export LC_ALL=C.UTF-8
-        ((fixes_applied++))
+        increment_fixes
         echo "🌍 Fixed locale: C.UTF-8" >&2
     fi
     
     # Fix missing USER
-    if [[ -z "$USER" ]]; then
+    if [[ -z "${USER:-}" ]]; then
         USER=$(whoami 2>/dev/null || echo "user")
         export USER
-        ((fixes_applied++))
+        increment_fixes
         echo "👤 Fixed USER: $USER" >&2
     fi
     
     # Fix missing HOME  
-    if [[ -z "$HOME" ]] || [[ ! -d "$HOME" ]]; then
-        if [[ "$USER" == "root" ]]; then
+    if [[ -z "${HOME:-}" ]] || [[ ! -d "${HOME:-/nonexistent}" ]]; then
+        if [[ "${USER:-}" == "root" ]]; then
             export HOME="/root"
         else
-            export HOME="/home/$USER"
+            export HOME="/home/${USER:-user}"
         fi
-        ((fixes_applied++))
+        increment_fixes
         echo "🏠 Fixed HOME: $HOME" >&2
     fi
     
     # Detect problematic sudo/su environment
-    if [[ -n "${SUDO_USER:-}" ]] || [[ -n "${SUDO_UID:-}" ]] || [[ "$PATH" == "/usr/bin:/bin" ]]; then
+    if [[ -n "${SUDO_USER:-}" ]] || [[ -n "${SUDO_UID:-}" ]] || [[ "${PATH:-}" == "/usr/bin:/bin" ]]; then
         export FORCE_ROOT_SAFE=1
         export MINIMAL_MODE=1
-        ((fixes_applied++))
+        increment_fixes
         echo "🛡️  Activated root-safe mode due to sudo/restricted environment" >&2
     fi
     
-    [[ $fixes_applied -gt 0 ]] && echo "✅ Applied $fixes_applied environment fixes" >&2
+    if [[ ${fixes_applied:-0} -gt 0 ]]; then
+        echo "✅ Applied $fixes_applied environment fixes" >&2
+    fi
 }
 
 # Apply environment fixes - moved to proper execution flow
