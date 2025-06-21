@@ -7,6 +7,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # Package mappings for different package managers
 declare -A PACKAGE_MAPS
+export PACKAGE_MAPS
 
 # Essential tools mapping
 declare -A ESSENTIAL_PACKAGES=(
@@ -19,6 +20,7 @@ declare -A ESSENTIAL_PACKAGES=(
     ["unzip"]="unzip"
     ["zsh"]="zsh"
 )
+export ESSENTIAL_PACKAGES
 
 # Modern tools mapping
 declare -A MODERN_PACKAGES=(
@@ -28,12 +30,14 @@ declare -A MODERN_PACKAGES=(
     ["ripgrep"]="ripgrep"
     ["gh"]="gh"
 )
+export MODERN_PACKAGES
 
 # ZSH plugins mapping
 declare -A ZSH_PACKAGES=(
     ["zsh-syntax-highlighting"]="zsh-syntax-highlighting"
     ["zsh-autosuggestions"]="zsh-autosuggestions"
 )
+export ZSH_PACKAGES
 
 # Update system packages
 update_system() {
@@ -88,7 +92,7 @@ install_package() {
                     # Create symlink if batcat exists
                     if command -v batcat &> /dev/null; then
                         mkdir -p ~/.local/bin
-                        ln -sf $(which batcat) ~/.local/bin/bat
+                        ln -sf "$(which batcat)" ~/.local/bin/bat
                     fi
                     return 0
                     ;;
@@ -139,7 +143,7 @@ install_package() {
         "fd-find")
             if [[ "$PACKAGE_MANAGER" =~ ^(apt|dnf|yum)$ ]]; then
                 mkdir -p ~/.local/bin
-                ln -sf $(which fdfind) ~/.local/bin/fd 2>/dev/null || true
+                ln -sf "$(which fdfind)" ~/.local/bin/fd 2>/dev/null || true
             fi
             ;;
     esac
@@ -213,7 +217,8 @@ install_eza_fallback() {
     esac
     
     local url="https://github.com/eza-community/eza/releases/latest/download/eza_${arch}-unknown-linux-musl.tar.gz"
-    local temp_dir=$(mktemp -d)
+    local temp_dir
+    temp_dir=$(mktemp -d)
     
     if curl -fsSL "$url" | tar -xz -C "$temp_dir"; then
         mkdir -p ~/.local/bin

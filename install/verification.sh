@@ -70,7 +70,8 @@ verify_installation() {
                 
                 # Check Node.js installation
                 if command -v node &> /dev/null; then
-                    local node_version=$(node --version)
+                    local node_version
+                    node_version=$(node --version)
                     echo "  ✓ Node.js is installed: $node_version"
                 else
                     print_warning "Node.js is not installed"
@@ -141,7 +142,8 @@ verify_system_installation() {
     local user_count=0
     for user_home in /home/*; do
         if [[ -d "$user_home" ]]; then
-            local username=$(basename "$user_home")
+            local username
+            username=$(basename "$user_home")
             local zshrc="$user_home/.zshrc"
             
             if [[ -f "$zshrc" ]] && grep -q "ZSH_CONFIG_DIR" "$zshrc"; then

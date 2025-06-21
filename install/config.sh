@@ -190,7 +190,8 @@ fi'
     # Setup for all users with home directories
     for user_home in /home/*; do
         if [[ -d "$user_home" ]] && [[ -w "$user_home" ]]; then
-            local username=$(basename "$user_home")
+            local username
+            username=$(basename "$user_home")
             local zshrc="$user_home/.zshrc"
             local user_backup_dir="/opt/modern-shell/backup/$username"
             mkdir -p "$user_backup_dir"

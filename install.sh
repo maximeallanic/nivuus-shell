@@ -386,6 +386,51 @@ install_system_mode() {
     echo -e "${GREEN}System-wide deployment complete! 🚀${NC}"
 }
 
+# Enhanced environment problem detection and fixing
+fix_problematic_environment() {
+    local fixes_applied=0
+    
+    # Fix locale issues more aggressively
+    if [[ -z "$LANG" ]] || [[ "$LANG" == "C" ]] || [[ "$LANG" == "POSIX" ]]; then
+        export LANG=C.UTF-8
+        export LC_ALL=C.UTF-8
+        ((fixes_applied++))
+        echo "🌍 Fixed locale: C.UTF-8" >&2
+    fi
+    
+    # Fix missing USER
+    if [[ -z "$USER" ]]; then
+        USER=$(whoami 2>/dev/null || echo "user")
+        export USER
+        ((fixes_applied++))
+        echo "👤 Fixed USER: $USER" >&2
+    fi
+    
+    # Fix missing HOME
+    if [[ -z "$HOME" ]] || [[ ! -d "$HOME" ]]; then
+        if [[ "$USER" == "root" ]]; then
+            export HOME="/root"
+        else
+            export HOME="/home/$USER"
+        fi
+        ((fixes_applied++))
+        echo "🏠 Fixed HOME: $HOME" >&2
+    fi
+    
+    # Detect problematic sudo/su environment
+    if [[ -n "$SUDO_USER" ]] || [[ -n "$SUDO_UID" ]] || [[ "$PATH" == "/usr/bin:/bin" ]]; then
+        export FORCE_ROOT_SAFE=1
+        export MINIMAL_MODE=1
+        ((fixes_applied++))
+        echo "🛡️  Activated root-safe mode due to sudo/restricted environment" >&2
+    fi
+    
+    [[ $fixes_applied -gt 0 ]] && echo "✅ Applied $fixes_applied environment fixes" >&2
+}
+
+# Apply environment fixes immediately
+fix_problematic_environment
+
 main() {
     print_header "Modern ZSH Configuration Installer v$VERSION"
     

@@ -4,22 +4,39 @@
 # SECURE ENVIRONMENT MANAGEMENT
 # =============================================================================
 
-# Fix locales to prevent warnings
-if [[ -z "$LANG" ]] || [[ "$LANG" == "C" ]]; then
-    # Try to set a reasonable UTF-8 locale
-    for locale_candidate in "en_US.UTF-8" "C.UTF-8" "POSIX"; do
-        if locale -a 2>/dev/null | grep -q "^${locale_candidate}$"; then
-            export LANG="$locale_candidate"
-            export LC_ALL="$locale_candidate"
-            break
+# Fix locales to prevent warnings - Enhanced version
+fix_locales() {
+    local locale_fixed=false
+    
+    # If no locale set or problematic, fix it
+    if [[ -z "$LANG" ]] || [[ "$LANG" == "C" ]] || [[ "$LANG" == "POSIX" ]]; then
+        # Try multiple locale candidates in order of preference
+        for locale_candidate in "C.UTF-8" "en_US.UTF-8" "en_GB.UTF-8" "POSIX" "C"; do
+            if locale -a 2>/dev/null | grep -q "^${locale_candidate}$" 2>/dev/null; then
+                export LANG="$locale_candidate"
+                export LC_ALL="$locale_candidate"
+                locale_fixed=true
+                [[ "$DEBUG_MODE" == "true" ]] && echo "🌍 Locale fixed: $locale_candidate" >&2
+                break
+            fi
+        done
+        
+        # Last resort: force C.UTF-8 even if not in locale -a
+        if [[ "$locale_fixed" == "false" ]]; then
+            export LANG="C.UTF-8"
+            export LC_ALL="C.UTF-8"
+            [[ "$DEBUG_MODE" == "true" ]] && echo "🌍 Locale forced: C.UTF-8" >&2
         fi
-    done
-fi
+    fi
+    
+    # Ensure LC_ALL is consistent
+    if [[ -z "$LC_ALL" ]] || [[ "$LC_ALL" != "$LANG" ]]; then
+        export LC_ALL="$LANG"
+    fi
+}
 
-# Ensure LC_ALL is set to prevent manpath warnings
-if [[ -z "$LC_ALL" ]]; then
-    export LC_ALL="$LANG"
-fi
+# Call locale fix immediately
+fix_locales
 
 # PATH is already fixed in 00-vscode-integration.zsh
 # Just ensure additional paths are available

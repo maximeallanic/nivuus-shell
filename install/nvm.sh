@@ -61,7 +61,8 @@ install_nvm_system() {
     # Install NVM for all users with home directories
     for user_home in /home/*; do
         if [[ -d "$user_home" ]] && [[ -w "$user_home" ]]; then
-            local username=$(basename "$user_home")
+            local username
+            username=$(basename "$user_home")
             local user_nvm_dir="$user_home/.nvm"
             
             if [[ ! -d "$user_nvm_dir" ]]; then

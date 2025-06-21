@@ -8,7 +8,8 @@
 smart_update() {
     print_step "Starting smart update..."
     
-    local temp_backup_dir=$(mktemp -d)
+    local temp_backup_dir
+    temp_backup_dir=$(mktemp -d)
     local update_log="$HOME/.zsh_update.log"
     
     echo "Update started at $(date)" >> "$update_log"
@@ -26,7 +27,8 @@ smart_update() {
     
     # Backup current configuration
     print_step "Creating update backup..."
-    local update_backup_dir="$HOME/.config/zsh-ultra-update-backup-$(date +%Y%m%d_%H%M%S)"
+    local update_backup_dir
+    update_backup_dir="$HOME/.config/zsh-ultra-update-backup-$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$update_backup_dir"
     
     if [[ -f ~/.zshrc ]]; then
@@ -49,7 +51,8 @@ smart_update() {
     # Regenerate .zshrc with preserved configurations
     print_step "Regenerating .zshrc with preserved configurations..."
     
-    local new_zshrc_content="# Modern ZSH Configuration (Updated: $(date))
+    local new_zshrc_content
+    new_zshrc_content="# Modern ZSH Configuration (Updated: $(date))
 # Configuration directory
 export ZSH_CONFIG_DIR=\"$INSTALL_DIR\"
 
@@ -95,6 +98,7 @@ fi
     print_step "Update backup saved to: $update_backup_dir"
     
     # Verify the update
+    # shellcheck disable=SC1090
     if source ~/.zshrc 2>/dev/null; then
         print_success "Configuration validated successfully"
     else

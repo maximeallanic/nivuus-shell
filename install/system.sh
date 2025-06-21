@@ -33,9 +33,10 @@ uninstall_system() {
     rm -f /root/.zshrc
     for user_home in /home/*; do
         if [[ -d "$user_home" ]]; then
-            local username=$(basename "$user_home")
+            local username
+            username=$(basename "$user_home")
             local zshrc="$user_home/.zshrc"
-            if [[ -f "$zshrc.backup."* ]]; then
+            if ls "$zshrc.backup."* 1> /dev/null 2>&1; then
                 latest_backup=$(ls -t "$zshrc.backup."* | head -1)
                 mv "$latest_backup" "$zshrc"
                 chown "$(stat -c '%U:%G' "$user_home")" "$zshrc"
@@ -54,7 +55,7 @@ uninstall_user() {
     print_header "Uninstalling Modern ZSH Configuration (User)"
     
     # Restore backup if available
-    if [[ -f ~/.zshrc.backup.* ]]; then
+    if ls ~/.zshrc.backup.* 1> /dev/null 2>&1; then
         latest_backup=$(ls -t ~/.zshrc.backup.* | head -1)
         mv "$latest_backup" ~/.zshrc
         print_success "Restored previous .zshrc"
