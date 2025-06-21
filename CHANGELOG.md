@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2024-05-29
 
+## [1.2.6] - 2025-06-21
+
+### Added
+
+[0;33m[1mPlease provide changelog entry for version 1.2.6:[0m
+[0;33mEnter your changes (one per line, empty line to finish):[0m
+[0;33mYou have 30 seconds to enter changes, or use --auto-changelog flag[0m
+
+[0;33m⚠️  Timeout reached. Using default changelog entry.[0m
+- Bug fixes and improvements
+
+
 ## [1.2.3] - 2025-06-21
 
 ### Added
