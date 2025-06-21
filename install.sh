@@ -55,7 +55,7 @@ done
 
 # Repository configuration
 REPO_URL="https://github.com/maximeallanic/nivuus-shell.git"
-VERSION="1.2.12"
+VERSION="1.2.13"
 
 # Function to get latest version from GitHub
 get_latest_version() {
