@@ -292,16 +292,24 @@ install_user_mode() {
     print_header "Installation Complete!"
     echo -e "${GREEN}🎉 Modern ZSH configuration installed successfully!${NC}"
     echo
-    echo -e "${CYAN}Next steps:${NC}"
-    echo -e "  1. Restart your terminal or run: ${YELLOW}exec zsh${NC}"
-    echo -e "  2. Run ${YELLOW}healthcheck${NC} to verify everything works"
-    echo -e "  3. Run ${YELLOW}aihelp${NC} to see AI-powered commands"
-    echo -e "  4. Edit ${YELLOW}~/.zsh_local${NC} for personal configurations"
-    echo
-    echo -e "${CYAN}Backup location:${NC} $BACKUP_DIR"
-    echo -e "${CYAN}Configuration:${NC} $INSTALL_DIR"
-    echo
-    echo -e "${GREEN}Happy coding! 🚀${NC}"
+    
+    # Run post-installation guide
+    if [[ -f "scripts/post-install.sh" ]]; then
+        echo "Running post-installation setup guide..."
+        echo
+        bash scripts/post-install.sh
+    else
+        echo -e "${CYAN}Next steps:${NC}"
+        echo -e "  1. Restart your terminal or run: ${YELLOW}exec zsh${NC}"
+        echo -e "  2. Run ${YELLOW}nvm-health${NC} to verify everything works"
+        echo -e "  3. Run ${YELLOW}nvm-auto-install${NC} to configure Node.js auto-installation"  
+        echo -e "  4. Edit ${YELLOW}~/.zsh_local${NC} for personal configurations"
+        echo
+        echo -e "${CYAN}Backup location:${NC} $BACKUP_DIR"
+        echo -e "${CYAN}Configuration:${NC} $INSTALL_DIR"
+        echo
+        echo -e "${GREEN}Happy coding! 🚀${NC}"
+    fi
 }
 
 install_system_mode() {

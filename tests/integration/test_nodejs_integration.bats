@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 
-# Node.js and npm integration tests - full shell environment
+bats_require_minimum_version 1.5.0
+
+# Integration tests for Node.js functionality
 load ../test_helper
 
 setup() {
