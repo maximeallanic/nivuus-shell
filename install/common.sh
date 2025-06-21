@@ -68,7 +68,7 @@ log_message() {
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     if [[ -n "$LOG_FILE" ]]; then
-        echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
+        echo "[$timestamp] [$level] $message" >> "$LOG_FILE" 2>/dev/null || true
     fi
 }
 
@@ -90,8 +90,8 @@ log_system_info() {
         echo "HOME: $HOME"
         echo "SHELL: $SHELL"
         echo "PATH: $PATH"
-        echo "OS: $(uname -a)"
-        echo "Distro: $(cat /etc/os-release 2>/dev/null | head -5 || echo 'Unknown')"
+        echo "OS: $(uname -a 2>/dev/null || echo 'Unknown')"
+        echo "Distro: $(head -5 /etc/os-release 2>/dev/null || echo 'Unknown')"
         echo "Project Root: $PROJECT_ROOT"
         echo "Install Dir: $INSTALL_MODULE_DIR"
         echo "System Wide: $SYSTEM_WIDE"
@@ -100,18 +100,18 @@ log_system_info() {
         echo "Verbose Mode: $VERBOSE_MODE"
         echo "================================="
         echo ""
-    } >> "$LOG_FILE"
+    } >> "$LOG_FILE" 2>/dev/null || true
 }
 
 # Global variables
 INSTALL_MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$INSTALL_MODULE_DIR")"
-NON_INTERACTIVE=false
-SYSTEM_WIDE=false
+[[ -z "${NON_INTERACTIVE:-}" ]] && NON_INTERACTIVE=false
+[[ -z "${SYSTEM_WIDE:-}" ]] && SYSTEM_WIDE=false
 
-# Debug and logging variables
-DEBUG_MODE=false
-VERBOSE_MODE=false
+# Debug and logging variables (only set if not already defined)
+[[ -z "${DEBUG_MODE:-}" ]] && DEBUG_MODE=false
+[[ -z "${VERBOSE_MODE:-}" ]] && VERBOSE_MODE=false
 LOG_FILE=""
 INSTALL_LOG=""
 
