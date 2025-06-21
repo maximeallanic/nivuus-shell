@@ -6,6 +6,30 @@
 
 set -euo pipefail
 
+# Critical locale fix first (before any other operations)
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+export LC_CTYPE=C.UTF-8
+export LC_NUMERIC=C.UTF-8
+export LC_TIME=C.UTF-8
+export LC_COLLATE=C.UTF-8
+export LC_MONETARY=C.UTF-8
+export LC_MESSAGES=C.UTF-8
+export LC_PAPER=C.UTF-8
+export LC_NAME=C.UTF-8
+export LC_ADDRESS=C.UTF-8
+export LC_TELEPHONE=C.UTF-8
+export LC_MEASUREMENT=C.UTF-8
+export LC_IDENTIFICATION=C.UTF-8
+
+# Root protection and antigen disabling
+if [[ $EUID -eq 0 ]] || [[ $UID -eq 0 ]] || [[ "$(whoami 2>/dev/null)" == "root" ]] || [[ "$USER" == "root" ]] || [[ "$HOME" == "/root" ]]; then
+    export ANTIGEN_DISABLE=1
+    export ANTIGEN_DISABLE_CACHE=1
+    export ANTIGEN_CACHE_DIR="/dev/null"
+    export MINIMAL_MODE=1
+fi
+
 # Parse debug arguments first
 DEBUG_MODE=false
 VERBOSE_MODE=false
@@ -33,7 +57,7 @@ done
 
 # Repository configuration
 REPO_URL="https://github.com/maximeallanic/nivuus-shell.git"
-VERSION="1.2.3"
+VERSION="1.2.4"
 
 # Function to get latest version from GitHub
 get_latest_version() {
@@ -460,11 +484,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Trap to generate debug report on failure
-trap 'if [[ $? -ne 0 ]]; then 
+# Trap to generate debug report on failure - but only for actual failures
+trap 'exit_code=$?; if [[ $exit_code -ne 0 ]]; then 
     print_error "Installation failed!"
     print_error "Debug information:"
-    print_error "- Exit code: $?"
+    print_error "- Exit code: $exit_code"
     print_error "- Last command: $BASH_COMMAND"
     print_error "- Log file: $LOG_FILE"
     if [[ "$DEBUG_MODE" == true ]]; then
@@ -474,6 +498,7 @@ trap 'if [[ $? -ne 0 ]]; then
         print_error "Run with --debug for detailed troubleshooting information"
         print_error "Or run: $0 --generate-report"
     fi
+    exit $exit_code
 fi' EXIT
 
 # Update directories based on final mode
@@ -490,3 +515,7 @@ export INSTALL_DIR BACKUP_DIR NON_INTERACTIVE SYSTEM_WIDE
 
 # Run main installation
 main
+
+# Clear the trap and exit successfully 
+trap - EXIT
+exit 0

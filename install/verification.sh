@@ -12,15 +12,16 @@ verify_installation() {
     # Check if zsh is installed
     if ! command -v zsh &> /dev/null; then
         print_error "ZSH is not installed"
-        ((errors++))
+        errors=$((errors + 1))
     else
         echo "  ✓ ZSH is installed"
     fi
     
     # Check if configuration directory exists
-    if [[ ! -d "$INSTALL_DIR" ]]; then
-        print_error "Configuration directory not found: $INSTALL_DIR"
-        ((errors++))
+    local install_dir="${INSTALL_DIR:-$HOME/.config/zsh-ultra}"
+    if [[ ! -d "$install_dir" ]]; then
+        print_error "Configuration directory not found: $install_dir"
+        errors=$((errors + 1))
     else
         echo "  ✓ Configuration directory exists"
     fi
@@ -28,10 +29,10 @@ verify_installation() {
     # Check if .zshrc exists and contains our configuration
     if [[ ! -f ~/.zshrc ]]; then
         print_error ".zshrc file not found"
-        ((errors++))
+        errors=$((errors + 1))
     elif ! grep -q "ZSH_CONFIG_DIR" ~/.zshrc; then
         print_error ".zshrc does not contain our configuration"
-        ((errors++))
+        errors=$((errors + 1))
     else
         echo "  ✓ .zshrc is properly configured"
     fi
@@ -115,7 +116,7 @@ verify_system_installation() {
     # Check system configuration directory
     if [[ ! -d "/opt/modern-shell" ]]; then
         print_error "System configuration directory not found"
-        ((errors++))
+        errors=$((errors + 1))
     else
         echo "  ✓ System configuration directory exists"
     fi
@@ -123,7 +124,7 @@ verify_system_installation() {
     # Check system profile
     if [[ ! -f "/etc/profile.d/modern-shell.sh" ]]; then
         print_error "System profile not found"
-        ((errors++))
+        errors=$((errors + 1))
     else
         echo "  ✓ System profile is installed"
     fi
@@ -131,7 +132,7 @@ verify_system_installation() {
     # Check root configuration
     if [[ ! -f "/root/.zshrc" ]]; then
         print_error "Root .zshrc not found"
-        ((errors++))
+        errors=$((errors + 1))
     else
         echo "  ✓ Root shell is configured"
     fi
@@ -145,7 +146,7 @@ verify_system_installation() {
             
             if [[ -f "$zshrc" ]] && grep -q "ZSH_CONFIG_DIR" "$zshrc"; then
                 echo "  ✓ User $username is configured"
-                ((user_count++))
+                user_count=$((user_count + 1))
             else
                 print_warning "User $username is not configured"
             fi
@@ -178,8 +179,8 @@ health_check() {
     echo
     
     echo -e "${CYAN}Configuration:${NC}"
-    echo "  Install Dir: $INSTALL_DIR"
-    echo "  Backup Dir: $BACKUP_DIR"
+    echo "  Install Dir: ${INSTALL_DIR:-$HOME/.config/zsh-ultra}"
+    echo "  Backup Dir: ${BACKUP_DIR:-$HOME/.config/zsh-ultra/backups}"
     echo
     
     if [[ "$SYSTEM_WIDE" == true ]]; then
