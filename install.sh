@@ -466,12 +466,17 @@ fix_problematic_environment() {
         echo "🏠 Fixed HOME: $HOME" >&2
     fi
     
-    # Detect problematic sudo/su environment
-    if [[ -n "${SUDO_USER:-}" ]] || [[ -n "${SUDO_UID:-}" ]] || [[ "${PATH:-}" == "/usr/bin:/bin" ]]; then
+    # Detect problematic sudo/su environment (only in truly restricted contexts)
+    if [[ -n "${SUDO_USER:-}" ]] && [[ "${PATH:-}" == "/usr/bin:/bin" ]]; then
         export FORCE_ROOT_SAFE=1
         export MINIMAL_MODE=1
         increment_fixes
-        echo "🛡️  Activated root-safe mode due to sudo/restricted environment" >&2
+        echo "🛡️  Activated root-safe mode due to restricted sudo environment" >&2
+    elif [[ -n "${SUDO_UID:-}" ]] && [[ "${PATH:-}" == "/usr/bin:/bin" ]]; then
+        export FORCE_ROOT_SAFE=1
+        export MINIMAL_MODE=1
+        increment_fixes
+        echo "🛡️  Activated root-safe mode due to restricted sudo environment" >&2
     fi
     
     if [[ ${fixes_applied:-0} -gt 0 ]]; then

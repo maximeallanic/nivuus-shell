@@ -4,16 +4,17 @@
 
 # Enhanced root detection (covers su, sudo -i, problematic environments, etc.)
 is_root_environment() {
-    # Direct root checks
-    [[ $EUID -eq 0 ]] || [[ $UID -eq 0 ]] || [[ "$(whoami 2>/dev/null)" == "root" ]] || [[ "$USER" == "root" ]] || [[ "$HOME" == "/root" ]] || \
-    # Sudo environment checks
-    [[ -n "$SUDO_USER" ]] || [[ -n "$SUDO_UID" ]] || \
-    # Check if we're in a restricted environment (locale issues often indicate this)
-    [[ "$LANG" == "C" && -z "$DISPLAY" && ! -w "$HOME" ]] || \
-    # Check for minimal environment indicators
-    [[ "$PATH" == "/usr/bin:/bin" ]] || \
-    # Force safe mode if explicitly requested
-    [[ "$FORCE_ROOT_SAFE" == "1" ]] || [[ "$MINIMAL_MODE" == "1" ]]
+    # Direct root checks - if we're actually root, check for problematic conditions
+    if [[ $EUID -eq 0 ]] || [[ $UID -eq 0 ]] || [[ "$(whoami 2>/dev/null)" == "root" ]]; then
+        # Only activate root-safe mode if we're in a truly problematic environment
+        [[ -n "$SUDO_USER" && "$PATH" == "/usr/bin:/bin" ]] || \
+        [[ "$LANG" == "C" && -z "$DISPLAY" && ! -w "$HOME" ]] || \
+        [[ "$PATH" == "/usr/bin:/bin" ]] || \
+        [[ "$FORCE_ROOT_SAFE" == "1" ]] || [[ "$MINIMAL_MODE" == "1" ]]
+    else
+        # Non-root user - only if explicitly forced
+        [[ "$FORCE_ROOT_SAFE" == "1" ]] || [[ "$MINIMAL_MODE" == "1" ]]
+    fi
 }
 
 # Diagnostic function for troubleshooting
