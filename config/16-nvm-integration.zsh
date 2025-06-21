@@ -172,16 +172,19 @@ nvm_auto_use() {
         
         # Show package manager info only if Node.js is now available
         if command -v node &> /dev/null; then
-            echo "📦 Node.js project detected"
+            # echo "📦 Node.js project detected"  # Commented out to reduce verbosity
             if [[ -f "yarn.lock" ]]; then
-                echo "   Package manager: Yarn"
-                echo "   Suggested commands: yarn install, yarn start, yarn test"
+                # echo "   Package manager: Yarn"
+                # echo "   Suggested commands: yarn install, yarn start, yarn test"
+                :  # No-op
             elif [[ -f "pnpm-lock.yaml" ]]; then
-                echo "   Package manager: PNPM"
-                echo "   Suggested commands: pnpm install, pnpm start, pnpm test"
+                # echo "   Package manager: PNPM"
+                # echo "   Suggested commands: pnpm install, pnpm start, pnpm test"
+                :  # No-op
             else
-                echo "   Package manager: NPM"
-                echo "   Suggested commands: npm install, npm start, npm test"
+                # echo "   Package manager: NPM"
+                # echo "   Suggested commands: npm install, npm start, npm test"
+                :  # No-op
             fi
         fi
     # Priority 3: No project files, ensure we have a default version
@@ -200,8 +203,8 @@ nvm_auto_use() {
 # Show Node.js project status
 nvm_project_status() {
     if is_node_project; then
-        echo "📦 Node.js Project Detected"
-        echo "========================="
+        # echo "📦 Node.js Project Detected"  # Commented out to reduce verbosity
+        # echo "========================="   # Commented out to reduce verbosity
         
         if [[ -f ".nvmrc" ]]; then
             echo "📌 Required Node.js version (.nvmrc): $(cat .nvmrc)"
@@ -790,11 +793,12 @@ alias nvm-auto-install='bash "${${(%):-%x}:A:h:h}/scripts/nvm-auto-install.sh"'
 if [[ -z "$_NIVUUS_NVM_WELCOME_SHOWN" ]] && command -v nvm &> /dev/null; then
     export _NIVUUS_NVM_WELCOME_SHOWN=1
     if [[ "$NVM_AUTO_INSTALL" != "true" ]] && [[ ! -f "$HOME/.nvm_auto_install" ]]; then
-        echo ""
-        echo "💡 NVM auto-install is disabled. Node.js versions won't be installed automatically."
-        echo "   Run 'nvm-auto-install' to configure this setting."
-        echo "   Or manually install versions with: nvm install --lts"
-        echo ""
+        # echo ""
+        # echo "💡 NVM auto-install is disabled. Node.js versions won't be installed automatically."
+        # echo "   Run 'nvm-auto-install' to configure this setting."
+        # echo "   Or manually install versions with: nvm install --lts"
+        # echo ""
+        :  # No-op - messages disabled for less verbosity
     fi
 fi
 alias nvm-activate="nvm_force_node"

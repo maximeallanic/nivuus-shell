@@ -2,6 +2,12 @@
 # Root-Safe Shell Setup
 # ====================
 
+# Allow complete disabling of root-safe mode
+if [[ "$DISABLE_ROOT_SAFE" == "1" ]]; then
+    # Root-safe mode is completely disabled
+    return 0
+fi
+
 # Enhanced root detection (covers su, sudo -i, problematic environments, etc.)
 is_root_environment() {
     # Direct root checks - if we're actually root, check for problematic conditions
@@ -56,22 +62,22 @@ if is_root_environment; then
     export MINIMAL_MODE=1
     export FORCE_ROOT_SAFE=1
 
-    # Safe shell prompt for root
-    export PS1='[root-safe] %~ # '
+    # Let the normal prompt handle root display (it already has root detection)
+    # The prompt will show a red # for root automatically
 
     # Completely disable antigen for root
-    export ANTIGEN_DISABLE=1
-    export ANTIGEN_DISABLE_CACHE=1
-    export ANTIGEN_CACHE_DIR="/dev/null"
-    unset ANTIGEN_CACHE
-    unset ANTIGEN_REPO_CACHE
-    unset ANTIGEN_CACHE_DIR
+    # export ANTIGEN_DISABLE=1
+    # export ANTIGEN_DISABLE_CACHE=1
+    # export ANTIGEN_CACHE_DIR="/dev/null"
+    # unset ANTIGEN_CACHE
+    # unset ANTIGEN_REPO_CACHE
+    # unset ANTIGEN_CACHE_DIR
     
     # Prevent any antigen operations
-    export ANTIGEN_CACHE_DIR="/dev/null"
+    # export ANTIGEN_CACHE_DIR="/dev/null"
     
     # Prevent NVM auto-install in root
-    export NVM_AUTO_INSTALL=false
+    # export NVM_AUTO_INSTALL=false
     
     # Disable other potentially problematic features
     export DISABLE_AUTO_UPDATE=true

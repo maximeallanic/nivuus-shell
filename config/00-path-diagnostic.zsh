@@ -113,7 +113,7 @@ diagnose_path() {
 }
 
 # Auto-fix PATH corruption (ALWAYS fix if corrupted)
-echo "🔧 Checking PATH integrity..."
+# echo "🔧 Checking PATH integrity..."  # Commented out to reduce verbosity
 
 # Force fix if PATH contains known problematic patterns
 if [[ "$PATH" == *"Unknown command"* ]] || [[ "$PATH" == *"share/man"* ]] || [[ "$PATH" == *"::"* ]]; then
@@ -153,7 +153,7 @@ elif ! diagnose_path >/dev/null 2>&1; then
         export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin"
     fi
 else
-    echo "✅ PATH is healthy"
+    # echo "✅ PATH is healthy"  # Commented out to reduce verbosity
 fi
 
 # Functions are available globally in ZSH by default
