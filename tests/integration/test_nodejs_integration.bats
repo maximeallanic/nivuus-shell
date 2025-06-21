@@ -12,11 +12,11 @@ setup() {
     mkdir -p "$TEST_PROJECT"
     
     # Create test shell configuration
-    cat > "$TEST_HOME/.zshrc" << 'EOF'
+    cat > "$TEST_HOME/.zshrc" << EOF
 # Load essential modules for Node.js testing
-source config/01-performance.zsh
-source config/02-history.zsh
-source config/16-nvm-integration.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/02-history.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
 }
 

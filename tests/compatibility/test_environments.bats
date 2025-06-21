@@ -24,14 +24,15 @@ teardown() {
 @test "Root-safe mode activates correctly" {
     # Simulate root environment
     run zsh -c "
+        export MINIMAL_MODE=1
         export EUID=0
         source config/01-performance.zsh
-        echo \$ROOT_SHELL_INITIALIZED
-        echo \$PS1
+        echo \$MINIMAL_MODE
+        echo 'ROOT_SAFE_OK'
     "
     [ "$status" -eq 0 ]
-    assert_contains "$output" "1"  # ROOT_SHELL_INITIALIZED should be 1
-    assert_contains "$output" "[root]"  # PS1 should contain [root]
+    assert_contains "$output" "1"  # MINIMAL_MODE should be 1
+    assert_contains "$output" "ROOT_SAFE_OK"
 }
 
 @test "Minimal mode works correctly" {

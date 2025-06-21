@@ -6,6 +6,31 @@
 
 set -euo pipefail
 
+# Parse debug arguments first
+DEBUG_MODE=false
+VERBOSE_MODE=false
+TEMP_LOG_FILE=""
+
+# Parse early debug args
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --debug)
+            DEBUG_MODE=true
+            VERBOSE_MODE=true
+            echo "🐛 Debug mode enabled"
+            shift
+            ;;
+        --verbose|-v)
+            VERBOSE_MODE=true
+            echo "📝 Verbose mode enabled"
+            shift
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
 # Repository configuration
 REPO_URL="https://github.com/maximeallanic/nivuus-shell.git"
 VERSION="1.2.0"
@@ -50,7 +75,41 @@ if [[ -z "$SCRIPT_DIR" ]] || [[ ! -f "$SCRIPT_DIR/install/common.sh" ]]; then
     
     print_remote_error() {
         echo -e "\033[0;31m❌ $1\033[0m"
+        [[ -n "$TEMP_LOG_FILE" ]] && echo "[$(date '+%Y-%m-%d %H:%M:%S')] [ERROR] $1" >> "$TEMP_LOG_FILE"
     }
+    
+    print_remote_debug() {
+        if [[ "$DEBUG_MODE" == true ]]; then
+            echo -e "\033[0;35m🐛 DEBUG: $1\033[0m"
+        fi
+        [[ -n "$TEMP_LOG_FILE" ]] && echo "[$(date '+%Y-%m-%d %H:%M:%S')] [DEBUG] $1" >> "$TEMP_LOG_FILE"
+    }
+    
+    print_remote_verbose() {
+        if [[ "$VERBOSE_MODE" == true ]] || [[ "$DEBUG_MODE" == true ]]; then
+            echo -e "\033[0;36m📝 $1\033[0m"
+        fi
+        [[ -n "$TEMP_LOG_FILE" ]] && echo "[$(date '+%Y-%m-%d %H:%M:%S')] [VERBOSE] $1" >> "$TEMP_LOG_FILE"
+    }
+    
+    # Initialize temp logging
+    TEMP_LOG_FILE="/tmp/shell-remote-install-$(date +%Y%m%d_%H%M%S).log"
+    touch "$TEMP_LOG_FILE" 2>/dev/null || TEMP_LOG_FILE=""
+    
+    if [[ -n "$TEMP_LOG_FILE" ]]; then
+        print_remote_step "Remote installation log: $TEMP_LOG_FILE"
+        {
+            echo "================================="
+            echo "REMOTE INSTALLATION LOG"
+            echo "================================="
+            echo "Date: $(date)"
+            echo "User: $(whoami)"
+            echo "System: $(uname -a)"
+            echo "Debug Mode: $DEBUG_MODE"
+            echo "Verbose Mode: $VERBOSE_MODE"
+            echo "================================="
+        } >> "$TEMP_LOG_FILE"
+    fi
     
     TEMP_DIR="/tmp/shell-install-$$"
     
@@ -118,11 +177,19 @@ fi
 # Load shared utilities first
 source "$SCRIPT_DIR/install/common.sh"
 
+# Initialize logging and parse debug arguments
+mapfile -t remaining_args < <(parse_debug_args "$@")
+init_logging
+
+print_debug "Script directory: $SCRIPT_DIR"
+print_debug "Remaining arguments: ${remaining_args[*]}"
+
 # Global variables (after loading common module)
 NON_INTERACTIVE=false
 SYSTEM_WIDE=false
 
 # Load installation modules
+print_debug "Loading installation modules..."
 source "$SCRIPT_DIR/install/packages.sh"
 source "$SCRIPT_DIR/install/nvm.sh"
 source "$SCRIPT_DIR/install/backup.sh"
@@ -130,6 +197,7 @@ source "$SCRIPT_DIR/install/config.sh"
 source "$SCRIPT_DIR/install/system.sh"
 source "$SCRIPT_DIR/install/verification.sh"
 source "$SCRIPT_DIR/install/update.sh"
+print_debug "All modules loaded successfully"
 
 # =============================================================================
 # DEPENDENCY CHECKS
@@ -308,16 +376,28 @@ show_help() {
     echo "  --non-interactive    Run in non-interactive mode (auto-accept all prompts)"
     echo "  --uninstall          Uninstall the configuration"
     echo "  --health-check       Run health check on existing installation"
+    echo "  --debug              Enable debug mode with verbose logging"
+    echo "  --verbose, -v        Enable verbose output"
+    echo "  --log-file FILE      Specify custom log file location"
+    echo "  --generate-report    Generate debug report and exit"
+    echo ""
+    echo "Debug Options:"
+    echo "  --debug              Full debug mode (implies --verbose)"
+    echo "  --verbose            Show detailed progress information"
+    echo "  --generate-report    Create diagnostic report for troubleshooting"
     echo ""
     echo "Examples:"
     echo "  $0                   # Install for current user"
     echo "  sudo $0 --system     # Install system-wide"
     echo "  $0 --non-interactive # Silent installation"
+    echo "  $0 --debug           # Debug installation issues"
+    echo "  $0 --generate-report # Generate diagnostic report"
     echo "  $0 --uninstall       # Remove installation"
     echo ""
 }
 
-# Parse command line arguments
+# Parse command line arguments (skip already parsed debug args)
+set -- "${remaining_args[@]}"
 while [[ $# -gt 0 ]]; do
     case $1 in
         --help|-h)
@@ -326,13 +406,16 @@ while [[ $# -gt 0 ]]; do
             ;;
         --system)
             SYSTEM_WIDE=true
+            print_debug "System-wide installation mode enabled"
             shift
             ;;
         --non-interactive)
             NON_INTERACTIVE=true
+            print_debug "Non-interactive mode enabled"
             shift
             ;;
         --uninstall)
+            print_debug "Uninstall mode requested"
             if [[ "$SYSTEM_WIDE" == true ]]; then
                 uninstall_system
             else
@@ -341,16 +424,46 @@ while [[ $# -gt 0 ]]; do
             exit 0
             ;;
         --health-check)
+            print_debug "Health check requested"
             health_check
             exit 0
             ;;
+        --generate-report)
+            print_debug "Debug report generation requested"
+            generate_debug_report
+            exit 0
+            ;;
+        --debug|--verbose|-v|--log-file)
+            # These were already processed by parse_debug_args
+            if [[ "$1" == "--log-file" ]]; then
+                shift # skip the file argument too
+            fi
+            shift
+            ;;
         *)
             print_error "Unknown option: $1"
-            show_help
+            print_error "Run '$0 --help' for usage information"
+            generate_debug_report
             exit 1
             ;;
     esac
 done
+
+# Trap to generate debug report on failure
+trap 'if [[ $? -ne 0 ]]; then 
+    print_error "Installation failed!"
+    print_error "Debug information:"
+    print_error "- Exit code: $?"
+    print_error "- Last command: $BASH_COMMAND"
+    print_error "- Log file: $LOG_FILE"
+    if [[ "$DEBUG_MODE" == true ]]; then
+        print_error "Generating debug report..."
+        generate_debug_report
+    else
+        print_error "Run with --debug for detailed troubleshooting information"
+        print_error "Or run: $0 --generate-report"
+    fi
+fi' EXIT
 
 # Update directories based on final mode
 if [[ "$SYSTEM_WIDE" == true ]]; then

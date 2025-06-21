@@ -15,12 +15,12 @@ teardown() {
 @test "NVM integration doesn't slow down shell startup significantly" {
     # Test startup time with NVM integration
     cat > "$TEST_HOME/.zshrc_with_nvm" << 'EOF'
-source config/01-performance.zsh
-source config/16-nvm-integration.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
     
     cat > "$TEST_HOME/.zshrc_without_nvm" << 'EOF'
-source config/01-performance.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
 EOF
     
     local startup_with_nvm=$(measure_startup_time "$TEST_HOME/.zshrc_with_nvm" 3)
@@ -43,8 +43,8 @@ EOF
 
 @test "Node.js command availability check is fast" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source config/01-performance.zsh
-source config/16-nvm-integration.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
     
     # Measure time to check if node is available
@@ -68,8 +68,8 @@ EOF
 
 @test "NVM lazy loading performance" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source config/01-performance.zsh
-source config/16-nvm-integration.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
     
     # Test if NVM uses lazy loading (doesn't load immediately)

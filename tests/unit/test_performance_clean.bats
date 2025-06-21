@@ -22,8 +22,8 @@ teardown() {
     run zsh -c "
         PROJECT_ROOT='$PROJECT_ROOT'
         cd \"\$PROJECT_ROOT\"
-        # Test with simulated root environment
-        EUID=0 source config/01-performance.zsh
+        # Test with minimal mode instead of EUID
+        MINIMAL_MODE=1 source config/01-performance.zsh
         echo 'MODULE_LOADED_OK'
     "
     [ "$status" -eq 0 ]

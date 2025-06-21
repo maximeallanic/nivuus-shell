@@ -8,9 +8,9 @@ setup() {
     export HOME="$TEST_HOME"
     
     # Create shell config with Node.js modules
-    cat > "$TEST_HOME/.zshrc" << 'EOF'
-source config/01-performance.zsh
-source config/16-nvm-integration.zsh
+    cat > "$TEST_HOME/.zshrc" << EOF
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
 }
 
@@ -21,7 +21,7 @@ teardown() {
 @test "NVM module load time is acceptable" {
     local start_time=$(date +%s%N)
     
-    run zsh -c "source config/16-nvm-integration.zsh"
+    run zsh -c "source $WORKSPACE_ROOT/config/16-nvm-integration.zsh"
     [ "$status" -eq 0 ]
     
     local end_time=$(date +%s%N)
@@ -138,14 +138,14 @@ teardown() {
 
 @test "NVM function call overhead" {
     # Load NVM module
-    run zsh -c "source config/16-nvm-integration.zsh"
+    run zsh -c "source $WORKSPACE_ROOT/config/16-nvm-integration.zsh"
     [ "$status" -eq 0 ]
     
     # Test nvm_auto_use function call time
     local start_time=$(date +%s%N)
     
     run zsh -c "
-        source config/16-nvm-integration.zsh
+        source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
         # Call function multiple times to test overhead
         nvm_auto_use 2>/dev/null || true
         nvm_auto_use 2>/dev/null || true
@@ -173,7 +173,10 @@ teardown() {
     "
     [ "$status" -eq 0 ]
     
-    local memory_kb="$output"
+    local memory_output="$output"
+    # Extract only the numeric part, ignore any text/emojis
+    local memory_kb=$(echo "$memory_output" | grep -o '[0-9]*' | head -1)
+    memory_kb=${memory_kb:-0}
     local memory_mb=$((memory_kb / 1024))
     
     color_output "blue" "Memory usage with Node.js integration: ${memory_mb}MB"

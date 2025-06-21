@@ -15,9 +15,9 @@ teardown() {
 @test "Shell startup time is under 300ms" {
     # Create a minimal test config
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source config/01-performance.zsh
-source config/02-history.zsh
-source config/03-completion.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/02-history.zsh
+source $WORKSPACE_ROOT/config/03-completion.zsh
 EOF
     
     local startup_time=$(measure_startup_time "$TEST_HOME/.zshrc" 3)
@@ -56,7 +56,10 @@ done
 EOF
     
     # Measure memory usage
-    local memory_kb=$(zsh -c "source '$TEST_HOME/.zshrc'; ps -o rss= -p \$\$" 2>/dev/null || echo "0")
+    local memory_output=$(zsh -c "source '$TEST_HOME/.zshrc'; ps -o rss= -p \$\$" 2>/dev/null || echo "0")
+    # Extract only the numeric part, ignore any text/emojis
+    local memory_kb=$(echo "$memory_output" | grep -o '[0-9]*' | head -1)
+    memory_kb=${memory_kb:-0}
     local memory_mb=$((memory_kb / 1024))
     
     color_output "blue" "Memory usage: ${memory_mb}MB"
@@ -71,8 +74,8 @@ EOF
     local start_time=$(date +%s%N)
     
     zsh -c "
-        source config/01-performance.zsh
-        source config/03-completion.zsh
+        source $WORKSPACE_ROOT/config/01-performance.zsh
+        source $WORKSPACE_ROOT/config/03-completion.zsh
         autoload -Uz compinit
         compinit -d '$TEST_HOME/.zcompdump'
     " 2>/dev/null

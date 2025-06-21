@@ -223,7 +223,7 @@ EOF
     # Test nvm_auto_use function (won't actually switch in test env)
     run zsh -c "
         cd '$project1'
-        source config/16-nvm-integration.zsh
+        source '$WORKSPACE_ROOT/config/16-nvm-integration.zsh'
         type nvm_auto_use >/dev/null 2>&1 && echo 'FUNCTION_AVAILABLE' || echo 'FUNCTION_MISSING'
     "
     [ "$status" -eq 0 ]

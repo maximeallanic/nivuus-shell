@@ -20,8 +20,8 @@ teardown() {
 @test "Node.js is available after shell initialization" {
     # Load the full shell configuration
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source config/01-performance.zsh
-source config/16-nvm-integration.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; command -v node"
@@ -37,8 +37,8 @@ EOF
 @test "npm is available after shell initialization" {
     # Load the full shell configuration
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source config/01-performance.zsh
-source config/16-nvm-integration.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; command -v npm"
@@ -53,8 +53,8 @@ EOF
 
 @test "Node.js version is reasonable" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source config/01-performance.zsh
-source config/16-nvm-integration.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; node --version 2>/dev/null"
@@ -80,8 +80,8 @@ EOF
 
 @test "npm version is reasonable" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source config/01-performance.zsh
-source config/16-nvm-integration.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; npm --version 2>/dev/null"
@@ -107,8 +107,8 @@ EOF
 
 @test "NVM environment variables are set correctly" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source config/01-performance.zsh
-source config/16-nvm-integration.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; echo \$NVM_DIR"
@@ -127,8 +127,8 @@ EOF
 
 @test "npx is available and working" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source config/01-performance.zsh
-source config/16-nvm-integration.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; command -v npx"
@@ -148,8 +148,8 @@ EOF
 
 @test "Global npm packages path is in PATH" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source config/01-performance.zsh
-source config/16-nvm-integration.zsh
+source $WORKSPACE_ROOT/config/01-performance.zsh
+source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; npm config get prefix 2>/dev/null"

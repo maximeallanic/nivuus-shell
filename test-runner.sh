@@ -156,13 +156,18 @@ run_test_suite() {
             print_section "Running compatibility tests..."
             bats "$TEST_DIR/compatibility/"*.bats || exit_code=$?
             ;;
+        "install")
+            print_section "Running installation tests..."
+            bats "$TEST_DIR/install/"*.bats || exit_code=$?
+            ;;
         "all")
             print_section "Running all tests..."
             bats "$TEST_DIR/main.bats" \
                  "$TEST_DIR/unit/"*.bats \
                  "$TEST_DIR/integration/"*.bats \
                  "$TEST_DIR/performance/"*.bats \
-                 "$TEST_DIR/compatibility/"*.bats || exit_code=$?
+                 "$TEST_DIR/compatibility/"*.bats \
+                 "$TEST_DIR/install/"*.bats || exit_code=$?
             ;;
         *)
             print_error "Unknown test type: $test_type"

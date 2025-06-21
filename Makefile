@@ -38,8 +38,12 @@ test-performance: ## Run performance benchmarks
 	@echo "⚡ Running performance tests..."
 	@./test-runner.sh performance
 
-test-compatibility: ## Run compatibility tests
-	@echo "🌐 Running compatibility tests..."
+test-install: ## Run installation script tests
+	@echo "📦 Running installation tests..."
+	@./test-runner.sh install
+
+test-compatibility: ## Run compatibility tests only
+	@echo "🔄 Running compatibility tests..."
 	@./test-runner.sh compatibility
 
 test-syntax: ## Test configuration syntax only

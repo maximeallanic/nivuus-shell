@@ -19,14 +19,14 @@ nvm_init() {
     
     # Load NVM script
     if [[ -s "$NVM_DIR/nvm.sh" ]]; then
-        \. "$NVM_DIR/nvm.sh"
+        source "$NVM_DIR/nvm.sh"
     else
         return 1
     fi
     
     # Load bash completion for NVM
     if [[ -s "$NVM_DIR/bash_completion" ]]; then
-        \. "$NVM_DIR/bash_completion"
+        source "$NVM_DIR/bash_completion"
     fi
     
     return 0
@@ -107,7 +107,7 @@ nvm_auto_use() {
                         if ! command -v node &> /dev/null; then
                             echo "🔧 Forcing Node.js PATH reload..."
                             # Force reload of NVM and PATH
-                            \. "$NVM_DIR/nvm.sh"
+                            source "$NVM_DIR/nvm.sh"
                             nvm use "${required_major_version}"
                             nvm_fix_path
                             
@@ -306,7 +306,7 @@ nvm_force_reload() {
     
     # Re-source NVM
     if [[ -s "$NVM_DIR/nvm.sh" ]]; then
-        \. "$NVM_DIR/nvm.sh"
+        source "$NVM_DIR/nvm.sh"
         if [[ "$silent_mode" != "true" ]]; then
             echo "✅ NVM script reloaded"
         fi
@@ -567,15 +567,15 @@ nvm_healthcheck() {
 
 # Strategy 1: Check if NVM_DIR is already set and try to reload
 if [[ -n "$NVM_DIR" && -s "$NVM_DIR/nvm.sh" ]]; then
-    \. "$NVM_DIR/nvm.sh"
+    source "$NVM_DIR/nvm.sh"
     if [[ -s "$NVM_DIR/bash_completion" ]]; then
-        \. "$NVM_DIR/bash_completion"
+        source "$NVM_DIR/bash_completion"
     fi
 fi
 
 # Strategy 2: Initialize NVM if not already done
 if ! command -v nvm &> /dev/null; then
-    nvm_init
+    nvm_init 2>/dev/null || true
 fi
 
 # Strategy 3: Fallback - Direct initialization from standard paths
@@ -583,9 +583,9 @@ if ! command -v nvm &> /dev/null; then
     for nvm_dir in "$HOME/.nvm" "/usr/local/nvm" "/opt/nvm"; do
         if [[ -s "$nvm_dir/nvm.sh" ]]; then
             export NVM_DIR="$nvm_dir"
-            \. "$nvm_dir/nvm.sh"
+            source "$nvm_dir/nvm.sh"
             if [[ -s "$nvm_dir/bash_completion" ]]; then
-                \. "$nvm_dir/bash_completion"
+                source "$nvm_dir/bash_completion"
             fi
             break
         fi
@@ -595,7 +595,7 @@ fi
 # Set up auto-switching functionality if NVM is available
 if command -v nvm &> /dev/null; then
     # Ensure a Node.js version is always loaded by default
-    local current_node="$(nvm current 2>/dev/null || echo 'none')"
+    current_node="$(nvm current 2>/dev/null || echo 'none')"
     
     if [[ "$current_node" == "none" ]] || [[ "$current_node" == "system" ]] || ! command -v node &> /dev/null; then
         # Force activation of a Node.js version - use direct nvm use without silence
