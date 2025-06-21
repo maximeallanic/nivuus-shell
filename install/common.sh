@@ -64,7 +64,8 @@ print_verbose() {
 log_message() {
     local level="$1"
     local message="$2"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     if [[ -n "$LOG_FILE" ]]; then
         echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
@@ -116,7 +117,8 @@ INSTALL_LOG=""
 
 # Initialize logging
 init_logging() {
-    local timestamp=$(date +"%Y%m%d_%H%M%S")
+    local timestamp
+    timestamp=$(date +"%Y%m%d_%H%M%S")
     if [[ "$SYSTEM_WIDE" == true ]]; then
         INSTALL_LOG="/tmp/shell-install-${timestamp}.log"
     else
@@ -141,11 +143,11 @@ init_logging() {
 # Configuration based on mode
 set_install_dirs() {
     if [[ "$SYSTEM_WIDE" == true ]]; then
-        INSTALL_DIR="/opt/modern-shell"
-        BACKUP_DIR="/opt/modern-shell-backup"
+        export INSTALL_DIR="/opt/modern-shell"
+        export BACKUP_DIR="/opt/modern-shell-backup"
     else
-        INSTALL_DIR="$HOME/.config/zsh-ultra"
-        BACKUP_DIR="$HOME/.config/zsh-ultra-backup"
+        export INSTALL_DIR="$HOME/.config/zsh-ultra"
+        export BACKUP_DIR="$HOME/.config/zsh-ultra-backup"
     fi
 }
 
@@ -323,7 +325,8 @@ check_command() {
     print_debug "Checking command availability: $cmd"
     
     if command -v "$cmd" &> /dev/null; then
-        local version=$(${cmd} --version 2>/dev/null | head -1 || echo "Unknown version")
+        local version
+        version=$(${cmd} --version 2>/dev/null | head -1 || echo "Unknown version")
         print_debug "Command found: $cmd ($version)"
         return 0
     else

@@ -485,6 +485,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Trap to generate debug report on failure - but only for actual failures
+# shellcheck disable=SC2154
 trap 'exit_code=$?; if [[ $exit_code -ne 0 ]]; then 
     print_error "Installation failed!"
     print_error "Debug information:"

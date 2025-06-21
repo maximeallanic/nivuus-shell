@@ -1,3 +1,5 @@
+#!/usr/bin/env zsh
+# shell: zsh
 # filepath: /home/mallanic/Projects/Personal/shell/config/vscode-integration.zsh
 # =============================================================================
 # VS CODE INTEGRATION

@@ -1,3 +1,5 @@
+#!/usr/bin/env zsh
+# shell: zsh
 # =============================================================================
 # SECURE ENVIRONMENT MANAGEMENT
 # =============================================================================
@@ -144,7 +146,8 @@ unload_env() {
 # Enhanced auto-env with security (silent mode)
 auto_env() {
     # Track current directory to avoid unnecessary operations
-    local current_dir="$(pwd)"
+    local current_dir
+    current_dir="$(pwd)"
     
     # Check if directory actually changed
     if [[ -n "$_NIVUUS_LAST_ENV_PWD" && "$current_dir" == "$_NIVUUS_LAST_ENV_PWD" ]]; then

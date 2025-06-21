@@ -1,3 +1,5 @@
+#!/usr/bin/env zsh
+# shell: zsh
 # =============================================================================
 # NVM (NODE VERSION MANAGER) CONFIGURATION
 # =============================================================================
@@ -39,7 +41,8 @@ nvm_auto_use() {
     fi
     
     # Track current directory to avoid unnecessary operations
-    local current_dir="$(pwd)"
+    local current_dir
+    current_dir="$(pwd)"
     
     # Check if directory actually changed
     if [[ -n "$_NIVUUS_LAST_PWD" && "$current_dir" == "$_NIVUUS_LAST_PWD" ]]; then
@@ -49,13 +52,17 @@ nvm_auto_use() {
     # Update last directory
     export _NIVUUS_LAST_PWD="$current_dir"
     
-    local nvmrc_path="$current_dir/.nvmrc"
-    local package_json_path="$current_dir/package.json"
-    local current_version="$(nvm current 2>/dev/null || echo 'none')"
+    local nvmrc_path
+    nvmrc_path="$current_dir/.nvmrc"
+    local package_json_path
+    package_json_path="$current_dir/package.json"
+    local current_version
+    current_version="$(nvm current 2>/dev/null || echo 'none')"
     
     # Priority 1: Check for .nvmrc file
     if [[ -f "$nvmrc_path" ]]; then
-        local nvmrc_version="$(cat "$nvmrc_path")"
+        local nvmrc_version
+        nvmrc_version="$(cat "$nvmrc_path")"
         
         # Only switch if different version
         if [[ "$nvmrc_version" != "$current_version" ]]; then
@@ -92,7 +99,8 @@ nvm_auto_use() {
         # Check if we need to switch based on package.json requirements
         if required_major_version=$(get_package_json_node_version); then
             # Get current major version
-            local current_major=""
+            local current_major
+            current_major=""
             if [[ "$current_version" != "none" && "$current_version" != "system" ]]; then
                 current_major=$(echo "$current_version" | sed 's/v//' | cut -d. -f1)
             fi
@@ -230,7 +238,8 @@ nvm_project_status() {
             echo "📌 Package.json Node.js engines: $engines_display"
         fi
         
-        local current_node="$(nvm current 2>/dev/null || echo 'none')"
+        local current_node
+        current_node="$(nvm current 2>/dev/null || echo 'none')"
         echo "📌 Current Node.js: $current_node"
         
         if [[ "$current_node" != "none" ]]; then
@@ -241,7 +250,8 @@ nvm_project_status() {
             if [[ -f "package.json" ]]; then
                 local required_major
                 if required_major=$(get_package_json_node_version); then
-                    local current_major=$(node --version 2>/dev/null | sed 's/v//' | cut -d. -f1)
+                    local current_major
+                    current_major="$(node --version 2>/dev/null | sed 's/v//' | cut -d. -f1)"
                     if [[ "$current_major" == "$required_major" ]]; then
                         echo "✅ Version matches package.json requirement"
                     else
@@ -287,7 +297,8 @@ get_package_json_node_version() {
         clean_version=$(echo "$engines_node" | sed -E 's/[>=^~]//g' | sed -E 's/\.x$/.0/' | sed -E 's/^([0-9]+)$/\1.0.0/' | sed -E 's/^([0-9]+\.[0-9]+)$/\1.0/')
         
         # Extract major version for LTS matching
-        local major_version=$(echo "$clean_version" | cut -d. -f1)
+        local major_version
+        major_version="$(echo "$clean_version" | cut -d. -f1)"
         
         echo "$major_version"
         return 0
@@ -298,7 +309,8 @@ get_package_json_node_version() {
 
 # Force NVM reinitialization and fix common issues
 nvm_force_reload() {
-    local silent_mode="${1:-false}"
+    local silent_mode
+    silent_mode="${1:-false}"
     
     if [[ "$silent_mode" != "true" ]]; then
         echo "🔄 Force reloading NVM..."
@@ -313,7 +325,8 @@ nvm_force_reload() {
     fi
     
     # Get current version
-    local current_version="$(nvm current 2>/dev/null || echo 'none')"
+    local current_version
+    current_version="$(nvm current 2>/dev/null || echo 'none')"
     if [[ "$silent_mode" != "true" ]]; then
         echo "📌 Current Node.js after reload: $current_version"
     fi
@@ -334,7 +347,8 @@ nvm_force_reload() {
                 fi
             fi
         elif [[ -f ".nvmrc" ]]; then
-            local nvmrc_version="$(cat .nvmrc)"
+            local nvmrc_version
+            nvmrc_version="$(cat .nvmrc)"
             if nvm use "$nvmrc_version" 2>/dev/null; then
                 current_version="$(nvm current 2>/dev/null)"
                 if [[ "$silent_mode" != "true" ]]; then
@@ -385,14 +399,14 @@ nvm_force_reload() {
 # Fix Node.js PATH if needed (silent version)
 nvm_fix_path_silent() {
     if command -v nvm &> /dev/null; then
-        local current_version="$(nvm current 2>/dev/null)"
+        local current_version
+        current_version="$(nvm current 2>/dev/null)"
         
         # If no version is active, try to activate default/LTS first
         if [[ "$current_version" == "none" ]] || [[ "$current_version" == "system" ]]; then
-            local activation_output
-            if activation_output=$(nvm use default 2>&1); then
+            if nvm use default 2>&1; then
                 current_version="$(nvm current 2>/dev/null)"
-            elif activation_output=$(nvm use --lts 2>&1); then
+            elif nvm use --lts 2>&1; then
                 current_version="$(nvm current 2>/dev/null)"
             else
                 return 1
@@ -401,10 +415,12 @@ nvm_fix_path_silent() {
         
         # Now fix the PATH
         if [[ "$current_version" != "none" && "$current_version" != "system" ]]; then
-            local node_bin_path="$NVM_DIR/versions/node/$current_version/bin"
+            local node_bin_path
+            node_bin_path="$NVM_DIR/versions/node/$current_version/bin"
             if [[ -d "$node_bin_path" ]]; then
                 # Remove any existing node paths to avoid duplicates
-                export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '/node/' | tr '\n' ':' | sed 's/:$//')
+                PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '/node/' | tr '\n' ':' | sed 's/:$//')
+                export PATH
                 # Add current node version to PATH at the beginning
                 export PATH="$node_bin_path:$PATH"
                 
@@ -421,15 +437,15 @@ nvm_fix_path_silent() {
 # Fix Node.js PATH if needed
 nvm_fix_path() {
     if command -v nvm &> /dev/null; then
-        local current_version="$(nvm current 2>/dev/null)"
+        local current_version
+        current_version="$(nvm current 2>/dev/null)"
         
         # If no version is active, try to activate default/LTS first
         if [[ "$current_version" == "none" ]] || [[ "$current_version" == "system" ]]; then
-            local activation_output
-            if activation_output=$(nvm use default 2>&1); then
+            if nvm use default 2>&1; then
                 current_version="$(nvm current 2>/dev/null)"
                 echo "🔧 Activated default Node.js version: $current_version"
-            elif activation_output=$(nvm use --lts 2>&1); then
+            elif nvm use --lts 2>&1; then
                 current_version="$(nvm current 2>/dev/null)"
                 echo "🔧 Activated LTS Node.js version: $current_version"
             else
@@ -440,10 +456,12 @@ nvm_fix_path() {
         
         # Now fix the PATH
         if [[ "$current_version" != "none" && "$current_version" != "system" ]]; then
-            local node_bin_path="$NVM_DIR/versions/node/$current_version/bin"
+            local node_bin_path
+            node_bin_path="$NVM_DIR/versions/node/$current_version/bin"
             if [[ -d "$node_bin_path" ]]; then
                 # Remove any existing node paths to avoid duplicates
-                export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '/node/' | tr '\n' ':' | sed 's/:$//')
+                PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '/node/' | tr '\n' ':' | sed 's/:$//')
+                export PATH
                 # Add current node version to PATH at the beginning
                 export PATH="$node_bin_path:$PATH"
                 
@@ -491,7 +509,8 @@ nvm_install() {
     fi
     
     echo "📦 Installing NVM..."
-    local nvm_version="v0.39.4"
+    local nvm_version
+    nvm_version="v0.39.4"
     curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${nvm_version}/install.sh" | bash
     
     # Reload this script to initialize NVM
@@ -518,7 +537,8 @@ nvm_update() {
     fi
     
     echo "🔄 Updating NVM..."
-    local nvm_version="v0.39.4"
+    local nvm_version
+    nvm_version="v0.39.4"
     curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${nvm_version}/install.sh" | bash
     
     # Reload NVM
@@ -543,7 +563,8 @@ nvm_healthcheck() {
         echo "✅ NVM command available"
         echo "📌 NVM version: $(nvm --version 2>/dev/null || echo 'unknown')"
         
-        local current_node="$(nvm current 2>/dev/null || echo 'none')"
+        local current_node
+        current_node="$(nvm current 2>/dev/null || echo 'none')"
         echo "📌 Current Node.js: $current_node"
         
         if [[ "$current_node" != "none" ]]; then
@@ -629,9 +650,9 @@ if command -v nvm &> /dev/null; then
         
         # Fix PATH if needed and Node.js was activated
         if command -v nvm &> /dev/null && [[ "$(nvm current 2>/dev/null)" != "none" ]]; then
-            local node_version="$(nvm current 2>/dev/null)"
+            node_version="$(nvm current 2>/dev/null)"
             if [[ "$node_version" != "none" && "$node_version" != "system" ]] && ! command -v node &> /dev/null; then
-                local node_bin_path="$NVM_DIR/versions/node/$node_version/bin"
+                node_bin_path="$NVM_DIR/versions/node/$node_version/bin"
                 if [[ -d "$node_bin_path" ]]; then
                     export PATH="$node_bin_path:$PATH"
                     hash -r 2>/dev/null || true
@@ -642,8 +663,8 @@ if command -v nvm &> /dev/null; then
         
         # Final verification (only show if we tried to activate something)
         if command -v node &> /dev/null; then
-            local node_ver="$(node --version 2>/dev/null)"
-            local npm_ver="$(npm --version 2>/dev/null)"
+            node_ver="$(node --version 2>/dev/null)"
+            npm_ver="$(npm --version 2>/dev/null)"
             echo "✅ Node.js is now available: $node_ver"
             [[ -n "$npm_ver" ]] && echo "✅ NPM is now available: $npm_ver"
         fi
@@ -651,7 +672,7 @@ if command -v nvm &> /dev/null; then
         # Node.js already active - silent check
         # Even if already active, ensure commands are available
         if ! command -v node &> /dev/null; then
-            local node_bin_path="$NVM_DIR/versions/node/$current_node/bin"
+            node_bin_path="$NVM_DIR/versions/node/$current_node/bin"
             if [[ -d "$node_bin_path" ]]; then
                 export PATH="$node_bin_path:$PATH"
                 hash -r 2>/dev/null || true
@@ -662,7 +683,7 @@ if command -v nvm &> /dev/null; then
     # Set up auto-switching on directory change
     if [[ "$NVM_AUTO_USE" == "true" ]]; then
         # Remove any existing nvm_auto_use from chpwd_functions to avoid duplicates
-        chpwd_functions=(${chpwd_functions:#nvm_auto_use})
+        chpwd_functions=("${chpwd_functions[@]:#nvm_auto_use}")
         chpwd_functions+=(nvm_auto_use)
         
         # Initialize directory tracking and check current directory on shell start
@@ -691,9 +712,12 @@ fi
 
 # Export Node.js related variables for VS Code (only if NVM is available)
 if command -v nvm &> /dev/null && command -v node &> /dev/null; then
-    export NODE_PATH="$(npm root -g 2>/dev/null)"
-    export NVM_BIN="$NVM_DIR/versions/node/$(nvm current)/bin"
-    export NVM_INC="$NVM_DIR/versions/node/$(nvm current)/include/node"
+    NODE_PATH="$(npm root -g 2>/dev/null)"
+    export NODE_PATH
+    NVM_BIN="$NVM_DIR/versions/node/$(nvm current)/bin"
+    export NVM_BIN
+    NVM_INC="$NVM_DIR/versions/node/$(nvm current)/include/node"
+    export NVM_INC
 fi
 
 # NVM debug function
@@ -714,13 +738,13 @@ nvm_debug() {
         echo "📌 NVM not initialized"
         if [[ -d "$HOME/.nvm" ]]; then
             echo "📌 NVM directory exists: $HOME/.nvm"
-            echo "📌 NVM script exists: $([[ -f '$HOME/.nvm/nvm.sh' ]] && echo 'yes' || echo 'no')"
+            echo "📌 NVM script exists: $([[ -f "$HOME/.nvm/nvm.sh" ]] && echo 'yes' || echo 'no')"
         else
             echo "📌 NVM directory missing: $HOME/.nvm"
         fi
     fi
     
-    echo "📌 PATH contains node: $(echo $PATH | grep -q node && echo 'yes' || echo 'no')"
+    echo "📌 PATH contains node: $(echo "$PATH" | grep -q node && echo 'yes' || echo 'no')"
     echo "📌 Which node: $(which node 2>/dev/null || echo 'not found')"
     echo "📌 Which npm: $(which npm 2>/dev/null || echo 'not found')"
 }

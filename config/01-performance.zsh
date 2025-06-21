@@ -1,3 +1,5 @@
+#!/usr/bin/env zsh
+# shell: zsh
 # =============================================================================
 # PERFORMANCE SETTINGS
 # =============================================================================
@@ -23,7 +25,7 @@ if [[ $EUID -eq 0 ]] || [[ $UID -eq 0 ]] || [[ "$(whoami 2>/dev/null)" == "root"
     export PS1='[root] %~ # '
     
     # Stop all further processing
-    return 0 2>/dev/null || exit 0
+    return 0 2>/dev/null || true
 fi
 
 # Early antigen protection (before any other processing)

@@ -1,3 +1,5 @@
+#!/usr/bin/env zsh
+# shell: zsh
 # =============================================================================
 # INTELLIGENT FUNCTIONS & PROJECT DETECTION
 # =============================================================================
@@ -27,7 +29,8 @@ psg() {
 
 # Configuration management shortcuts
 config_backup() {
-    local backup_dir="$HOME/.config/zsh-manual-backup-$(date +%Y%m%d_%H%M%S)"
+    local backup_dir
+    backup_dir="$HOME/.config/zsh-manual-backup-$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$backup_dir"
     
     if [[ -f ~/.zshrc ]]; then
