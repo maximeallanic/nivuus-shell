@@ -17,12 +17,12 @@ while [[ $# -gt 0 ]]; do
         --debug)
             DEBUG_MODE=true
             VERBOSE_MODE=true
-            echo "🐛 Debug mode enabled"
+            echo "🐛 Debug mode enabled" >&2
             shift
             ;;
         --verbose|-v)
             VERBOSE_MODE=true
-            echo "📝 Verbose mode enabled"
+            echo "📝 Verbose mode enabled" >&2
             shift
             ;;
         *)
@@ -80,14 +80,14 @@ if [[ -z "$SCRIPT_DIR" ]] || [[ ! -f "$SCRIPT_DIR/install/common.sh" ]]; then
     
     print_remote_debug() {
         if [[ "$DEBUG_MODE" == true ]]; then
-            echo -e "\033[0;35m🐛 DEBUG: $1\033[0m"
+            echo -e "\033[0;35m🐛 DEBUG: $1\033[0m" >&2
         fi
         [[ -n "$TEMP_LOG_FILE" ]] && echo "[$(date '+%Y-%m-%d %H:%M:%S')] [DEBUG] $1" >> "$TEMP_LOG_FILE"
     }
     
     print_remote_verbose() {
         if [[ "$VERBOSE_MODE" == true ]] || [[ "$DEBUG_MODE" == true ]]; then
-            echo -e "\033[0;36m📝 $1\033[0m"
+            echo -e "\033[0;36m📝 $1\033[0m" >&2
         fi
         [[ -n "$TEMP_LOG_FILE" ]] && echo "[$(date '+%Y-%m-%d %H:%M:%S')] [VERBOSE] $1" >> "$TEMP_LOG_FILE"
     }
@@ -177,9 +177,12 @@ fi
 # Load shared utilities first
 source "$SCRIPT_DIR/install/common.sh"
 
-# Initialize logging and parse debug arguments
-mapfile -t remaining_args < <(parse_debug_args "$@")
+# Initialize logging with original arguments (before parsing)
+original_args=("$@")
 init_logging
+
+# Parse debug arguments and get remaining arguments
+mapfile -t remaining_args < <(parse_debug_args "${original_args[@]}")
 
 print_debug "Script directory: $SCRIPT_DIR"
 print_debug "Remaining arguments: ${remaining_args[*]}"

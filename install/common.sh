@@ -419,17 +419,17 @@ parse_debug_args() {
             --debug)
                 DEBUG_MODE=true
                 VERBOSE_MODE=true
-                print_info "Debug mode enabled"
+                echo "🐛 Debug mode enabled" >&2
                 shift
                 ;;
             --verbose|-v)
                 VERBOSE_MODE=true
-                print_info "Verbose mode enabled"
+                echo "📝 Verbose mode enabled" >&2
                 shift
                 ;;
             --log-file)
                 LOG_FILE="$2"
-                print_info "Using log file: $LOG_FILE"
+                echo "ℹ️  Using log file: $LOG_FILE" >&2
                 shift 2
                 ;;
             --generate-report)
