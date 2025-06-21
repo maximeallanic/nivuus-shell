@@ -414,6 +414,10 @@ generate_debug_report() {
 parse_debug_args() {
     local remaining_args=()
     
+    # Force initialize variables if not properly set
+    [[ -z "$DEBUG_MODE" ]] && DEBUG_MODE=false
+    [[ -z "$VERBOSE_MODE" ]] && VERBOSE_MODE=false
+    
     while [[ $# -gt 0 ]]; do
         case $1 in
             --debug)

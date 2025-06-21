@@ -21,4 +21,17 @@ if [[ $EUID -eq 0 ]]; then
     # Prevent loading user-specific configs that might fail
     unset ANTIGEN_CACHE
     unset ANTIGEN_REPO_CACHE
+    
+    # Prevent antigen from writing to system locations
+    export ANTIGEN_CACHE_DIR="/tmp/antigen-cache-$$"
+    export ANTIGEN_DISABLE_CACHE=1
+    
+    # Prevent NVM auto-install in root
+    export NVM_AUTO_INSTALL=false
+fi
+
+# Also disable antigen cache writing for non-root users if no write permissions
+if [[ ! -w "/etc/zsh" ]] 2>/dev/null; then
+    export ANTIGEN_CACHE_DIR="${HOME}/.cache/antigen"
+    mkdir -p "${HOME}/.cache/antigen" 2>/dev/null || true
 fi

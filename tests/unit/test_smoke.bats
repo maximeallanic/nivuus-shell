@@ -29,8 +29,8 @@ teardown() {
 
 @test "Main functionality works" {
     run zsh -c "
-        source config/01-performance.zsh
-        source config/06-aliases.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
+        source $PROJECT_ROOT/config/06-aliases.zsh
         echo 'Modules loaded successfully'
     "
     [ "$status" -eq 0 ]
@@ -39,7 +39,7 @@ teardown() {
 
 @test "Shell options are set correctly" {
     run zsh -c "
-        source config/01-performance.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
         setopt | grep null_glob && echo 'NULL_GLOB_SET'
         setopt | grep -v global_rcs && echo 'GLOBAL_RCS_UNSET'
     "
@@ -48,7 +48,7 @@ teardown() {
 
 @test "Environment is clean after loading" {
     run zsh -c "
-        source config/01-performance.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
         echo \$PATH | grep -q '/usr/local/bin' && echo 'PATH_OK'
         [ -n '\$LANG' ] && echo 'LANG_SET'
     "

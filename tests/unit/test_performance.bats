@@ -24,7 +24,7 @@ teardown() {
         PROJECT_ROOT='$PROJECT_ROOT'
         cd \"\$PROJECT_ROOT\"
         export MINIMAL_MODE=1
-        source config/01-performance.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
         echo 'MINIMAL_MODE_ACTIVE'
     "
     [ "$status" -eq 0 ]
@@ -35,7 +35,7 @@ teardown() {
     run zsh -c "
         PROJECT_ROOT='$PROJECT_ROOT'
         cd \"\$PROJECT_ROOT\"
-        source config/01-performance.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
         
         # Test that add_to_path function is defined and works
         if declare -f add_to_path >/dev/null 2>&1; then
@@ -65,7 +65,7 @@ teardown() {
         PROJECT_ROOT='$PROJECT_ROOT'
         export HOME='$TEST_HOME'
         cd \"\$PROJECT_ROOT\"
-        source config/01-performance.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
         [ -d \"\$HOME/.antigen\" ] && echo 'ANTIGEN_DIR_CREATED'
         
         # Check permissions if directory exists
@@ -87,7 +87,7 @@ teardown() {
     run zsh -c "
         PROJECT_ROOT='$PROJECT_ROOT'
         cd \"\$PROJECT_ROOT\"
-        source config/01-performance.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
         echo 'MODULE_LOADS_OK'
         
         # Check if null_glob option is set
@@ -114,7 +114,7 @@ teardown() {
     run zsh -c "
         PROJECT_ROOT='$PROJECT_ROOT'
         cd \"\$PROJECT_ROOT\"
-        source config/01-performance.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
         # Check if global_rcs is NOT in the list of set options
         if setopt | grep -q global_rcs; then
             echo 'GLOBAL_RCS_ENABLED'

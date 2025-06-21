@@ -20,8 +20,8 @@ teardown() {
 @test "Node.js is available after shell initialization" {
     # Load the full shell configuration
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source $WORKSPACE_ROOT/config/01-performance.zsh
-source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
+source $PROJECT_ROOT/config/01-performance.zsh
+source $PROJECT_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; command -v node"
@@ -37,8 +37,8 @@ EOF
 @test "npm is available after shell initialization" {
     # Load the full shell configuration
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source $WORKSPACE_ROOT/config/01-performance.zsh
-source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
+source $PROJECT_ROOT/config/01-performance.zsh
+source $PROJECT_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; command -v npm"
@@ -53,13 +53,14 @@ EOF
 
 @test "Node.js version is reasonable" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source $WORKSPACE_ROOT/config/01-performance.zsh
-source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
+source $PROJECT_ROOT/config/01-performance.zsh
+source $PROJECT_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; node --version 2>/dev/null"
     if [ "$status" -eq 0 ]; then
-        local version="$output"
+        # Extract only the version line (last line that starts with v)
+        local version=$(echo "$output" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | tail -1)
         color_output "blue" "Node.js version: $version"
         
         # Check if version format is valid (starts with v and has numbers)
@@ -80,13 +81,14 @@ EOF
 
 @test "npm version is reasonable" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source $WORKSPACE_ROOT/config/01-performance.zsh
-source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
+source $PROJECT_ROOT/config/01-performance.zsh
+source $PROJECT_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; npm --version 2>/dev/null"
     if [ "$status" -eq 0 ]; then
-        local version="$output"
+        # Extract only the version line (last line with numbers)
+        local version=$(echo "$output" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | tail -1)
         color_output "blue" "npm version: $version"
         
         # Check if version format is valid
@@ -107,8 +109,8 @@ EOF
 
 @test "NVM environment variables are set correctly" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source $WORKSPACE_ROOT/config/01-performance.zsh
-source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
+source $PROJECT_ROOT/config/01-performance.zsh
+source $PROJECT_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; echo \$NVM_DIR"
@@ -127,8 +129,8 @@ EOF
 
 @test "npx is available and working" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source $WORKSPACE_ROOT/config/01-performance.zsh
-source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
+source $PROJECT_ROOT/config/01-performance.zsh
+source $PROJECT_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; command -v npx"
@@ -148,8 +150,8 @@ EOF
 
 @test "Global npm packages path is in PATH" {
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source $WORKSPACE_ROOT/config/01-performance.zsh
-source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
+source $PROJECT_ROOT/config/01-performance.zsh
+source $PROJECT_ROOT/config/16-nvm-integration.zsh
 EOF
     
     run zsh -c "source '$TEST_HOME/.zshrc'; npm config get prefix 2>/dev/null"

@@ -67,16 +67,23 @@ nvm_auto_use() {
                     echo "⚠️  Failed to activate Node.js $nvmrc_version"
                 fi
             else
-                echo "📦 Node.js version $nvmrc_version not installed. Installing..."
-                if nvm install "$nvmrc_version"; then
-                    if nvm use "$nvmrc_version" --silent; then
-                        echo "📦 Node.js $nvmrc_version installed and loaded"
-                        nvm_fix_path
+                echo "📦 Node.js version $nvmrc_version not installed."
+                # Only auto-install if explicitly enabled
+                if [[ "$NVM_AUTO_INSTALL" == "true" ]] || [[ -f "$HOME/.nvm_auto_install" ]]; then
+                    echo "📦 Installing Node.js version $nvmrc_version..."
+                    if nvm install "$nvmrc_version"; then
+                        if nvm use "$nvmrc_version" --silent; then
+                            echo "📦 Node.js $nvmrc_version installed and loaded"
+                            nvm_fix_path
+                        else
+                            echo "⚠️  Failed to activate installed Node.js $nvmrc_version"
+                        fi
                     else
-                        echo "⚠️  Failed to activate installed Node.js $nvmrc_version"
+                        echo "⚠️  Failed to install Node.js $nvmrc_version"
                     fi
                 else
-                    echo "⚠️  Failed to install Node.js $nvmrc_version"
+                    echo "   Run 'nvm install $nvmrc_version' to install it"
+                    echo "   Or set NVM_AUTO_INSTALL=true to enable automatic installation"
                 fi
             fi
         fi
@@ -92,37 +99,30 @@ nvm_auto_use() {
             
             # Switch if current major version doesn't match required
             if [[ "$current_major" != "$required_major_version" ]]; then
-                echo "📦 Switching to Node.js v${required_major_version}.x for package.json requirement..."
+                echo "📦 Node.js v${required_major_version}.x required for package.json"
                 
-                # Try to install and use the required major version
-                if nvm install "${required_major_version}" 2>/dev/null; then
-                    # Use the version without --silent to ensure proper activation
+                # Check if version is available first
+                if nvm list | grep -q "v${required_major_version}"; then
+                    # Version is available, just switch to it
                     if nvm use "${required_major_version}"; then
                         echo "✅ Node.js v${required_major_version}.x activated"
-                        
-                        # Force PATH update immediately
                         nvm_fix_path
-                        
-                        # Verify that node is actually available
-                        if ! command -v node &> /dev/null; then
-                            echo "🔧 Forcing Node.js PATH reload..."
-                            # Force reload of NVM and PATH
-                            source "$NVM_DIR/nvm.sh"
-                            nvm use "${required_major_version}"
-                            nvm_fix_path
-                            
-                            # Final check
-                            if command -v node &> /dev/null; then
-                                echo "✅ Node.js is now available"
-                            else
-                                echo "⚠️  Node.js PATH issue persists - run 'nvm-reload'"
+                    fi
+                else
+                    # Version not installed
+                    if [[ "$NVM_AUTO_INSTALL" == "true" ]] || [[ -f "$HOME/.nvm_auto_install" ]]; then
+                        echo "📦 Installing Node.js v${required_major_version}.x..."
+                        if nvm install "${required_major_version}" 2>/dev/null; then
+                            if nvm use "${required_major_version}"; then
+                                echo "✅ Node.js v${required_major_version}.x installed and activated"
+                                nvm_fix_path
                             fi
                         fi
                     else
-                        echo "⚠️  Failed to activate Node.js v${required_major_version}.x"
+                        echo "   Node.js v${required_major_version}.x not installed"
+                        echo "   Run 'nvm install ${required_major_version}' to install it"
+                        echo "   Or set NVM_AUTO_INSTALL=true to enable automatic installation"
                     fi
-                else
-                    echo "⚠️  Failed to install Node.js v${required_major_version}.x"
                 fi
             else
                 echo "✅ Node.js v${current_major}.x already matches requirement"
@@ -597,43 +597,55 @@ if command -v nvm &> /dev/null; then
     # Ensure a Node.js version is always loaded by default
     current_node="$(nvm current 2>/dev/null || echo 'none')"
     
+    # Only try to activate if no version is currently active AND no node binary is available
     if [[ "$current_node" == "none" ]] || [[ "$current_node" == "system" ]] || ! command -v node &> /dev/null; then
-        # Force activation of a Node.js version - use direct nvm use without silence
-        echo "📦 Activating Node.js for shell session..."
-        if nvm use default; then
-            echo "✅ Node.js default version loaded"
-        elif nvm use --lts; then
-            echo "✅ Node.js LTS version loaded"
-        elif nvm use node; then
-            echo "✅ Node.js stable version loaded"
+        # Check if we already have Node.js available (might be globally installed)
+        if command -v node &> /dev/null; then
+            # Node.js is available, just not through NVM - that's fine
+            true
         else
-            echo "📦 Installing Node.js LTS for default use..."
-            if nvm install --lts && nvm use --lts; then
-                nvm alias default "lts/*"
-                echo "✅ Node.js LTS installed and loaded"
-            fi
-        fi
-        
-        # Immediately verify and fix PATH if needed
-        if ! command -v node &> /dev/null; then
-            echo "🔧 Force-fixing Node.js PATH..."
-            local node_version="$(nvm current 2>/dev/null)"
-            if [[ "$node_version" != "none" && "$node_version" != "system" ]]; then
-                local node_bin_path="$NVM_DIR/versions/node/$node_version/bin"
-                if [[ -d "$node_bin_path" ]]; then
-                    # Force PATH update
-                    export PATH="$node_bin_path:$PATH"
-                    hash -r 2>/dev/null || true
-                    echo "🔧 Node.js PATH forced to: $node_bin_path"
+            # Try to activate existing Node.js versions first
+            echo "📦 Activating Node.js for shell session..."
+            if nvm use default --silent 2>/dev/null; then
+                echo "✅ Node.js default version loaded"
+            elif nvm use --lts --silent 2>/dev/null; then
+                echo "✅ Node.js LTS version loaded"
+            elif nvm use node --silent 2>/dev/null; then
+                echo "✅ Node.js stable version loaded"
+            else
+                # Only install if user explicitly wants it (check for a flag file)
+                if [[ -f "$HOME/.nvm_auto_install" ]] || [[ "$NVM_AUTO_INSTALL" == "true" ]]; then
+                    echo "📦 Installing Node.js LTS for default use..."
+                    if nvm install --lts && nvm use --lts; then
+                        nvm alias default "lts/*"
+                        echo "✅ Node.js LTS installed and loaded"
+                    fi
+                else
+                    echo "⚠️  No Node.js versions available. Run 'nvm install --lts' to install"
+                    echo "   Or set NVM_AUTO_INSTALL=true to enable automatic installation"
                 fi
             fi
         fi
         
-        # Final verification
+        # Fix PATH if needed and Node.js was activated
+        if command -v nvm &> /dev/null && [[ "$(nvm current 2>/dev/null)" != "none" ]]; then
+            local node_version="$(nvm current 2>/dev/null)"
+            if [[ "$node_version" != "none" && "$node_version" != "system" ]] && ! command -v node &> /dev/null; then
+                local node_bin_path="$NVM_DIR/versions/node/$node_version/bin"
+                if [[ -d "$node_bin_path" ]]; then
+                    export PATH="$node_bin_path:$PATH"
+                    hash -r 2>/dev/null || true
+                    echo "🔧 Node.js PATH updated for version $node_version"
+                fi
+            fi
+        fi
+        
+        # Final verification (only show if we tried to activate something)
         if command -v node &> /dev/null; then
-            echo "✅ Node.js $(node --version) is now available"
-        else
-            echo "⚠️  Node.js activation failed - run 'nvm-activate' to fix"
+            local node_ver="$(node --version 2>/dev/null)"
+            local npm_ver="$(npm --version 2>/dev/null)"
+            echo "✅ Node.js is now available: $node_ver"
+            [[ -n "$npm_ver" ]] && echo "✅ NPM is now available: $npm_ver"
         fi
     else
         # Node.js already active - silent check
@@ -748,5 +760,18 @@ alias nvm-status="nvm_project_status"
 alias nvm-debug="nvm_debug"
 alias nvm-fix="nvm_fix_path"
 alias nvm-reload="nvm_force_reload"
+alias nvm-auto-install='bash "${${(%):-%x}:A:h:h}/scripts/nvm-auto-install.sh"'
+
+# Show helpful message on first shell start
+if [[ -z "$_NIVUUS_NVM_WELCOME_SHOWN" ]] && command -v nvm &> /dev/null; then
+    export _NIVUUS_NVM_WELCOME_SHOWN=1
+    if [[ "$NVM_AUTO_INSTALL" != "true" ]] && [[ ! -f "$HOME/.nvm_auto_install" ]]; then
+        echo ""
+        echo "💡 NVM auto-install is disabled. Node.js versions won't be installed automatically."
+        echo "   Run 'nvm-auto-install' to configure this setting."
+        echo "   Or manually install versions with: nvm install --lts"
+        echo ""
+    fi
+fi
 alias nvm-activate="nvm_force_node"
 alias node-status="nvm_project_status"

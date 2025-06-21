@@ -2,6 +2,23 @@
 # SECURE ENVIRONMENT MANAGEMENT
 # =============================================================================
 
+# Fix locales to prevent warnings
+if [[ -z "$LANG" ]] || [[ "$LANG" == "C" ]]; then
+    # Try to set a reasonable UTF-8 locale
+    for locale_candidate in "en_US.UTF-8" "C.UTF-8" "POSIX"; do
+        if locale -a 2>/dev/null | grep -q "^${locale_candidate}$"; then
+            export LANG="$locale_candidate"
+            export LC_ALL="$locale_candidate"
+            break
+        fi
+    done
+fi
+
+# Ensure LC_ALL is set to prevent manpath warnings
+if [[ -z "$LC_ALL" ]]; then
+    export LC_ALL="$LANG"
+fi
+
 # PATH is already fixed in 00-vscode-integration.zsh
 # Just ensure additional paths are available
 

@@ -23,7 +23,7 @@ teardown() {
         PROJECT_ROOT='$PROJECT_ROOT'
         cd \"\$PROJECT_ROOT\"
         # Test with minimal mode instead of EUID
-        MINIMAL_MODE=1 source config/01-performance.zsh
+        MINIMAL_MODE=1 source $PROJECT_ROOT/config/01-performance.zsh
         echo 'MODULE_LOADED_OK'
     "
     [ "$status" -eq 0 ]
@@ -34,7 +34,7 @@ teardown() {
     run zsh -c "
         PROJECT_ROOT='$PROJECT_ROOT'
         cd \"\$PROJECT_ROOT\"
-        source config/01-performance.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
         
         # Check that essential paths are in PATH
         echo \$PATH | grep -q '/usr/local/bin' && echo 'ESSENTIAL_PATHS_OK'
@@ -48,7 +48,7 @@ teardown() {
         PROJECT_ROOT='$PROJECT_ROOT'
         export HOME='$TEST_HOME'
         cd \"\$PROJECT_ROOT\"
-        source config/01-performance.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
         
         # Check if .antigen directory exists or is created
         if [ -d \"\$HOME/.antigen\" ]; then
@@ -76,7 +76,7 @@ teardown() {
     run zsh -c "
         PROJECT_ROOT='$PROJECT_ROOT'
         cd \"\$PROJECT_ROOT\"
-        source config/01-performance.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
         
         # Test that null_glob is enabled (module sets it)
         if [[ -o null_glob ]] 2>/dev/null; then
@@ -97,7 +97,7 @@ teardown() {
     run zsh -c "
         PROJECT_ROOT='$PROJECT_ROOT'
         cd \"\$PROJECT_ROOT\"
-        source config/01-performance.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
         
         # Check if global_rcs is NOT in the list of set options
         if setopt | grep -q global_rcs; then

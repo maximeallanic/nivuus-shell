@@ -15,9 +15,9 @@ teardown() {
 @test "Shell startup time is under 300ms" {
     # Create a minimal test config
     cat > "$TEST_HOME/.zshrc" << 'EOF'
-source $WORKSPACE_ROOT/config/01-performance.zsh
-source $WORKSPACE_ROOT/config/02-history.zsh
-source $WORKSPACE_ROOT/config/03-completion.zsh
+source $PROJECT_ROOT/config/01-performance.zsh
+source $PROJECT_ROOT/config/02-history.zsh
+source $PROJECT_ROOT/config/03-completion.zsh
 EOF
     
     local startup_time=$(measure_startup_time "$TEST_HOME/.zshrc" 3)
@@ -74,8 +74,8 @@ EOF
     local start_time=$(date +%s%N)
     
     zsh -c "
-        source $WORKSPACE_ROOT/config/01-performance.zsh
-        source $WORKSPACE_ROOT/config/03-completion.zsh
+        source $PROJECT_ROOT/config/01-performance.zsh
+        source $PROJECT_ROOT/config/03-completion.zsh
         autoload -Uz compinit
         compinit -d '$TEST_HOME/.zcompdump'
     " 2>/dev/null

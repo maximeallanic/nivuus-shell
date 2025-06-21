@@ -10,11 +10,11 @@ setup() {
     # Create a complete shell configuration for testing
     cat > "$TEST_HOME/.zshrc" << 'EOF'
 # Load all essential modules including Node.js
-source $WORKSPACE_ROOT/config/01-performance.zsh
-source $WORKSPACE_ROOT/config/02-history.zsh  
-source $WORKSPACE_ROOT/config/03-completion.zsh
-source $WORKSPACE_ROOT/config/10-environment.zsh
-source $WORKSPACE_ROOT/config/16-nvm-integration.zsh
+source $PROJECT_ROOT/config/01-performance.zsh
+source $PROJECT_ROOT/config/02-history.zsh  
+source $PROJECT_ROOT/config/03-completion.zsh
+source $PROJECT_ROOT/config/10-environment.zsh
+source $PROJECT_ROOT/config/16-nvm-integration.zsh
 EOF
 }
 
