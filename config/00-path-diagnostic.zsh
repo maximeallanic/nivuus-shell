@@ -117,9 +117,7 @@ diagnose_path() {
 
 # Force fix if PATH contains known problematic patterns
 if [[ "$PATH" == *"Unknown command"* ]] || [[ "$PATH" == *"share/man"* ]] || [[ "$PATH" == *"::"* ]]; then
-    echo "🔧 PATH corruption detected - forcing fix..."
-    
-    # Emergency clean PATH
+    # Emergency clean PATH (silent fix)
     export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/home/mallanic/.local/bin"
     
     # Add NVM if available
@@ -136,19 +134,11 @@ if [[ "$PATH" == *"Unknown command"* ]] || [[ "$PATH" == *"share/man"* ]] || [[ 
     if [[ -d "/snap/bin" ]]; then
         export PATH="$PATH:/snap/bin"
     fi
-    
-    echo "✅ PATH emergency fix applied"
-    echo "New PATH: $PATH"
 elif ! diagnose_path >/dev/null 2>&1; then
-    echo "🔧 Fixing corrupted PATH with full rebuild..."
     fix_corrupted_path
     
-    # Verify fix worked
-    if diagnose_path >/dev/null 2>&1; then
-        echo "✅ PATH fixed successfully"
-        echo "New PATH: $PATH"
-    else
-        echo "❌ PATH fix failed, applying emergency fallback"
+    # Verify fix worked (silent check)
+    if ! diagnose_path >/dev/null 2>&1; then
         # Emergency fallback PATH
         export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin"
     fi
