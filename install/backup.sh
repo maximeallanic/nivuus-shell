@@ -1,6 +1,73 @@
 #!/bin/bash
 # Enhanced backup script with robust gcloud preservation
 
+# =============================================================================
+# BACKUP MODULE
+# =============================================================================
+
+# Create a full backup of the user's current shell configuration and extract
+# user-specific customizations to be re-injected later by setup_zshrc.
+# - Backs up ~/.zshrc (timestamped) when present
+# - Backs up ~/.zsh_local when present
+# - Backs up existing installation directory (INSTALL_DIR) when present
+# - Extracts user configs into "$BACKUP_DIR/user_configs.zsh"
+backup_existing_config() {
+    print_step "Creating backup of existing configuration..."
+
+    # Ensure backup directory exists
+    if [[ -z "${BACKUP_DIR:-}" ]]; then
+        # Fallback for safety; common.sh should have exported this already
+        BACKUP_DIR="$HOME/.config/zsh-ultra-backup"
+        export BACKUP_DIR
+    fi
+
+    mkdir -p "$BACKUP_DIR" 2>/dev/null || {
+        print_error "Failed to create backup directory: $BACKUP_DIR"
+        return 1
+    }
+
+    local timestamp
+    timestamp=$(date +%Y%m%d_%H%M%S)
+
+    # Backup ~/.zshrc
+    if [[ -f "$HOME/.zshrc" ]]; then
+        local zshrc_backup="$BACKUP_DIR/zshrc.backup.$timestamp"
+        cp "$HOME/.zshrc" "$zshrc_backup" 2>>"$LOG_FILE" || true
+        print_success "Backed up existing .zshrc to: $zshrc_backup"
+
+        # Extract user-specific configurations for re-injection
+        local user_configs_file="$BACKUP_DIR/user_configs.zsh"
+        if extract_user_configs "$HOME/.zshrc" "$user_configs_file"; then
+            print_success "Extracted user configurations: $user_configs_file"
+        else
+            # Ensure file exists but empty for downstream logic
+            : > "$user_configs_file"
+            print_warning "No user configurations detected to preserve"
+        fi
+    else
+        print_info ".zshrc not found — nothing to backup for ~/.zshrc"
+        # Still ensure placeholder file exists for setup_zshrc logic
+        : > "$BACKUP_DIR/user_configs.zsh"
+    fi
+
+    # Backup ~/.zsh_local if present
+    if [[ -f "$HOME/.zsh_local" ]]; then
+        local zsh_local_backup="$BACKUP_DIR/zsh_local.backup.$timestamp"
+        cp "$HOME/.zsh_local" "$zsh_local_backup" 2>>"$LOG_FILE" || true
+        print_success "Backed up ~/.zsh_local to: $zsh_local_backup"
+    fi
+
+    # Backup existing installation directory if present
+    if [[ -n "${INSTALL_DIR:-}" ]] && [[ -d "$INSTALL_DIR" ]]; then
+        local install_backup="$BACKUP_DIR/install.backup.$timestamp"
+        mkdir -p "$install_backup" 2>/dev/null || true
+        cp -r "$INSTALL_DIR" "$install_backup/" 2>>"$LOG_FILE" || true
+        print_success "Backed up existing install dir to: $install_backup/$(basename "$INSTALL_DIR")"
+    fi
+
+    print_success "Backup completed"
+}
+
 # Check if a line contains user configuration
 is_user_config() {
     local line="$1"
@@ -120,19 +187,4 @@ extract_user_configs() {
     fi
 }
 
-# Main function for testing
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    echo "Testing backup script..."
-    if [[ -f ~/.zshrc ]]; then
-        temp_output=$(mktemp)
-        if extract_user_configs ~/.zshrc "$temp_output"; then
-            echo "✅ Successfully extracted user configurations:"
-            cat "$temp_output"
-            rm -f "$temp_output"
-        else
-            echo "❌ No user configurations found"
-        fi
-    else
-        echo "❌ ~/.zshrc not found"
-    fi
-fi
+# (No standalone execution block)

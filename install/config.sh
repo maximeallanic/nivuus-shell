@@ -169,7 +169,9 @@ fi'
         print_warning "Backed up existing .zshrc for root"
         
         # Extract user configurations for root
-        extract_user_configs "$root_zshrc" "$root_backup_dir/user_configs.zsh"
+        if ! extract_user_configs "$root_zshrc" "$root_backup_dir/user_configs.zsh"; then
+            : > "$root_backup_dir/user_configs.zsh"
+        fi
     fi
     
     # Create new .zshrc for root
@@ -202,7 +204,9 @@ fi'
                 print_warning "Backed up existing .zshrc for user $username"
                 
                 # Extract user configurations
-                extract_user_configs "$zshrc" "$user_backup_dir/user_configs.zsh"
+                if ! extract_user_configs "$zshrc" "$user_backup_dir/user_configs.zsh"; then
+                    : > "$user_backup_dir/user_configs.zsh"
+                fi
             fi
             
             # Create new .zshrc

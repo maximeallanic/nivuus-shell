@@ -508,6 +508,7 @@ show_help() {
     echo "Options:"
     echo "  --help, -h           Show this help message"
     echo "  --system             Install system-wide for all users (requires sudo)"
+    echo "  --system-wide        Alias for --system"
     echo "  --non-interactive    Run in non-interactive mode (auto-accept all prompts)"
     echo "  --uninstall          Uninstall the configuration"
     echo "  --health-check       Run health check on existing installation"
@@ -557,7 +558,7 @@ while [[ $# -gt 0 ]]; do
             show_help
             exit 0
             ;;
-        --system)
+    --system|--system-wide)
             SYSTEM_WIDE=true
             print_debug "System-wide installation mode enabled"
             shift
