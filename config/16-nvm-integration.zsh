@@ -64,141 +64,8 @@ nvm_init() {
     return 0
 }
 
-# Auto-switch Node.js version based on .nvmrc or package.json
-nvm_auto_use() {
-    if ! command -v nvm &> /dev/null; then
-        return 0
-    fi
-    
-    # Track current directory to avoid unnecessary operations
-    local current_dir
-    current_dir="$(pwd)"
-    
-    # Check if directory actually changed
-    if [[ -n "$_NIVUUS_LAST_PWD" && "$current_dir" == "$_NIVUUS_LAST_PWD" ]]; then
-        return 0  # Same directory, do nothing
-    fi
-    
-    # Update last directory
-    export _NIVUUS_LAST_PWD="$current_dir"
-    
-    local nvmrc_path
-    nvmrc_path="$current_dir/.nvmrc"
-    local package_json_path
-    package_json_path="$current_dir/package.json"
-    local current_version
-    current_version="$(nvm current 2>/dev/null || echo 'none')"
-    
-    # Priority 1: Check for .nvmrc file
-    if [[ -f "$nvmrc_path" ]]; then
-        local nvmrc_version
-        nvmrc_version="$(cat "$nvmrc_path")"
-        
-        # Only switch if different version
-        if [[ "$nvmrc_version" != "$current_version" ]]; then
-            if nvm list "$nvmrc_version" &> /dev/null; then
-                if nvm use "$nvmrc_version" --silent; then
-                    nvm_fix_path
-                fi
-            else
-                # Version not installed, auto-install if enabled
-                if [[ "$NVM_AUTO_INSTALL" == "true" ]] || [[ -f "$HOME/.nvm_auto_install" ]]; then
-                    if nvm install "$nvmrc_version" >/dev/null 2>&1; then
-                        if nvm use "$nvmrc_version" --silent; then
-                            nvm_fix_path
-                        fi
-                    fi
-                fi
-            fi
-        fi
-    # Priority 2: Check for package.json and ensure Node.js is loaded
-    elif [[ -f "$package_json_path" ]]; then
-        # Check if we need to switch based on package.json requirements
-        if required_major_version=$(get_package_json_node_version); then
-            # Get current major version
-            local current_major
-            current_major=""
-            if [[ "$current_version" != "none" && "$current_version" != "system" ]]; then
-                current_major=$(echo "$current_version" | sed 's/v//' | cut -d. -f1)
-            fi
-            
-            # Switch if current major version doesn't match required
-            if [[ "$current_major" != "$required_major_version" ]]; then
-                # Check if version is available first
-                if nvm list | grep -q "v${required_major_version}"; then
-                    # Version is available, just switch to it
-                    if nvm use "${required_major_version}" --silent; then
-                        nvm_fix_path
-                    fi
-                else
-                    # Version not installed
-                    if [[ "$NVM_AUTO_INSTALL" == "true" ]] || [[ -f "$HOME/.nvm_auto_install" ]]; then
-                        if nvm install "${required_major_version}" 2>/dev/null; then
-                            if nvm use "${required_major_version}" --silent; then
-                                nvm_fix_path
-                            fi
-                        fi
-                    else
-                        echo "   Run 'nvm install ${required_major_version}' to install it"
-                        echo "   Or set NVM_AUTO_INSTALL=true to enable automatic installation"
-                    fi
-                fi
-            else
-                echo "✅ Node.js v${current_major}.x already matches requirement"
-            fi
-        else
-            # No engines specified, ensure Node.js is loaded
-            if [[ "$current_version" == "none" ]] || [[ "$current_version" == "system" ]]; then
-                echo "📦 Loading Node.js for project..."
-                
-                if nvm use default 2>/dev/null; then
-                    echo "✅ Node.js default version loaded"
-                    nvm_fix_path
-                elif nvm use --lts --silent 2>/dev/null; then
-                    nvm_fix_path
-                else
-                    if nvm install --lts >/dev/null 2>&1 && nvm use --lts --silent >/dev/null 2>&1; then
-                        nvm alias default "lts/*" >/dev/null 2>&1
-                        nvm_fix_path
-                    fi
-                fi
-                
-                # Verify that node is actually available after any switch
-                if ! command -v node &> /dev/null; then
-                    nvm_fix_path
-                fi
-            fi
-        fi
-        
-        # Show package manager info only if Node.js is now available
-        if command -v node &> /dev/null; then
-            # echo "📦 Node.js project detected"  # Commented out to reduce verbosity
-            if [[ -f "yarn.lock" ]]; then
-                # echo "   Package manager: Yarn"
-                # echo "   Suggested commands: yarn install, yarn start, yarn test"
-                :  # No-op
-            elif [[ -f "pnpm-lock.yaml" ]]; then
-                # echo "   Package manager: PNPM"
-                # echo "   Suggested commands: pnpm install, pnpm start, pnpm test"
-                :  # No-op
-            else
-                # echo "   Package manager: NPM"
-                # echo "   Suggested commands: npm install, npm start, npm test"
-                :  # No-op
-            fi
-        fi
-    # Priority 3: No project files, ensure we have a default version
-    elif [[ "$current_version" == "none" ]] || [[ "$current_version" == "system" ]]; then
-        # Use default version if no .nvmrc, no package.json and no version selected
-        if nvm use default --silent 2>/dev/null; then
-            # Silent load, no message needed for non-project directories
-            true
-        elif nvm use --lts --silent 2>/dev/null; then
-            # Silent load, no message needed for non-project directories
-            true
-        fi
-    fi
-}
+# LEGACY: This function is replaced by nvm_auto_use_lazy() in the ultra-lazy loading section
+# Kept for backwards compatibility if called manually, but not used in normal operation
 
 # Show Node.js project status
 nvm_project_status() {
@@ -399,99 +266,47 @@ nvm_force_reload() {
     fi
 }
 
-# Fix Node.js PATH if needed (silent version)
-nvm_fix_path_silent() {
-    if command -v nvm &> /dev/null; then
-        local current_version
-        current_version="$(nvm current 2>/dev/null)"
-        
-        # If no version is active, try to activate default/LTS first
-        if [[ "$current_version" == "none" ]] || [[ "$current_version" == "system" ]]; then
-            if nvm use default 2>&1; then
-                current_version="$(nvm current 2>/dev/null)"
-            elif nvm use --lts 2>&1; then
-                current_version="$(nvm current 2>/dev/null)"
-            else
-                return 1
-            fi
+# Fix Node.js PATH if needed
+# Usage: nvm_fix_path [silent]
+nvm_fix_path() {
+    local silent="${1:-false}"
+    command -v nvm &> /dev/null || return 1
+
+    local current_version="$(nvm current 2>/dev/null)"
+
+    # Try to activate if no version is active
+    if [[ "$current_version" == "none" || "$current_version" == "system" ]]; then
+        if nvm use default 2>&1; then
+            current_version="$(nvm current 2>/dev/null)"
+            [[ "$silent" != "true" ]] && echo "🔧 Activated default Node.js: $current_version"
+        elif nvm use --lts 2>&1; then
+            current_version="$(nvm current 2>/dev/null)"
+            [[ "$silent" != "true" ]] && echo "🔧 Activated LTS Node.js: $current_version"
+        else
+            [[ "$silent" != "true" ]] && echo "⚠️  No valid Node.js version to add to PATH"
+            return 1
         fi
-        
-        # Now fix the PATH
-        if [[ "$current_version" != "none" && "$current_version" != "system" ]]; then
-            local node_bin_path
-            node_bin_path="$NVM_DIR/versions/node/$current_version/bin"
-            if [[ -d "$node_bin_path" ]]; then
-                # Remove any existing node paths to avoid duplicates
-                PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '/node/' | tr '\n' ':' | sed 's/:$//')
-                export PATH
-                # Add current node version to PATH at the beginning
-                export PATH="$node_bin_path:$PATH"
-                
-                # Force update of the current shell's PATH
-                hash -r 2>/dev/null || true
-                
-                return 0
-            fi
+    fi
+
+    # Fix PATH
+    if [[ "$current_version" != "none" && "$current_version" != "system" ]]; then
+        local node_bin_path="$NVM_DIR/versions/node/$current_version/bin"
+        if [[ -d "$node_bin_path" ]]; then
+            PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '/node/' | tr '\n' ':' | sed 's/:$//')
+            export PATH="$node_bin_path:$PATH"
+            hash -r 2>/dev/null || true
+            return 0
+        else
+            [[ "$silent" != "true" ]] && echo "⚠️  Node.js bin directory not found: $node_bin_path"
+            return 1
         fi
     fi
     return 1
 }
 
-# Fix Node.js PATH if needed
-nvm_fix_path() {
-    if command -v nvm &> /dev/null; then
-        local current_version
-        current_version="$(nvm current 2>/dev/null)"
-        
-        # If no version is active, try to activate default/LTS first
-        if [[ "$current_version" == "none" ]] || [[ "$current_version" == "system" ]]; then
-            if nvm use default 2>&1; then
-                current_version="$(nvm current 2>/dev/null)"
-                echo "🔧 Activated default Node.js version: $current_version"
-            elif nvm use --lts 2>&1; then
-                current_version="$(nvm current 2>/dev/null)"
-                echo "🔧 Activated LTS Node.js version: $current_version"
-            else
-                echo "⚠️  No valid Node.js version to add to PATH"
-                return 1
-            fi
-        fi
-        
-        # Now fix the PATH
-        if [[ "$current_version" != "none" && "$current_version" != "system" ]]; then
-            local node_bin_path
-            node_bin_path="$NVM_DIR/versions/node/$current_version/bin"
-            if [[ -d "$node_bin_path" ]]; then
-                # Remove any existing node paths to avoid duplicates
-                PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '/node/' | tr '\n' ':' | sed 's/:$//')
-                export PATH
-                # Add current node version to PATH at the beginning
-                export PATH="$node_bin_path:$PATH"
-                
-                # Force update of the current shell's PATH
-                hash -r 2>/dev/null || true
-                
-                # Verify the fix worked (silent check)
-                if command -v node &> /dev/null && command -v npm &> /dev/null; then
-                    return 0
-                else
-                    echo "⚠️  Node.js still not available after PATH update"
-                    echo "🔧 Current PATH (first 5 entries):"
-                    echo "$PATH" | tr ':' '\n' | head -5
-                    return 1
-                fi
-            else
-                echo "⚠️  Node.js bin directory not found: $node_bin_path"
-                return 1
-            fi
-        else
-            echo "⚠️  No valid Node.js version to add to PATH"
-            return 1
-        fi
-    else
-        echo "⚠️  NVM command not available"
-        return 1
-    fi
+# Alias for backwards compatibility
+nvm_fix_path_silent() {
+    nvm_fix_path true
 }
 
 # Check if current directory is a Node.js project

@@ -14,26 +14,15 @@
 # Only load zsh plugins in zsh shell
 if [[ -n "$ZSH_VERSION" ]]; then
     # Load zsh-autosuggestions first to avoid widget conflicts
-    # Support multiple installation paths for different distributions
-    if [[ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
-        # Ubuntu/Debian
-        source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-    elif [[ -f ~/.local/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
-        # Manual installation
-        source ~/.local/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-    elif [[ -f /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
-        # System-wide manual installation
-        source /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-    elif [[ -f /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
-        # Homebrew on Apple Silicon
-        source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-    elif [[ -f /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
-        # Homebrew on Intel Mac
-        source /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-    elif [[ -f /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
-        # Arch Linux
-        source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-    fi
+    for plugin_path in \
+        /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+        ~/.local/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+        /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+        /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+        /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+    do
+        [[ -f "$plugin_path" ]] && source "$plugin_path" && break
+    done
 
     # Configure autosuggestions with minimal highlighting
     ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#888888"
@@ -45,26 +34,15 @@ if [[ -n "$ZSH_VERSION" ]]; then
     # Load zsh-syntax-highlighting after autosuggestions to avoid widget conflicts
     # PERFORMANCE: Only load if enabled (saves ~27ms if disabled)
     if [[ "$ENABLE_SYNTAX_HIGHLIGHTING" == "true" ]]; then
-        # Support multiple installation paths for different distributions
-        if [[ -f /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
-            # Ubuntu/Debian
-            source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-        elif [[ -f ~/.local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
-            # Manual installation
-            source ~/.local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-        elif [[ -f /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
-            # System-wide manual installation
-            source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-        elif [[ -f /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
-            # Homebrew on Apple Silicon
-            source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-        elif [[ -f /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
-            # Homebrew on Intel Mac
-            source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-        elif [[ -f /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
-            # Arch Linux
-            source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-        fi
+        for plugin_path in \
+            /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+            ~/.local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+            /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+            /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+            /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+        do
+            [[ -f "$plugin_path" ]] && source "$plugin_path" && break
+        done
 
         # Configure subtle syntax highlighting colors
         ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets)
