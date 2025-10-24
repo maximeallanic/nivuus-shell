@@ -4,26 +4,8 @@
 # AUTO-UPDATE SYSTEM WITH CONFIGURATION PRESERVATION
 # =============================================================================
 
-# Smart auto-update with configuration preservation
+# Auto-update disabled for performance (use 'zsh_update' for manual updates)
 smart_auto_update() {
-    local update_check_file="$HOME/.zsh_last_update_check"
-    local current_time=$(date +%s)
-    local config_dir="${ZSH_CONFIG_DIR:-$HOME/.config/zsh-ultra}"
-    
-    # Check once per week (604800 seconds)
-    if [[ -f "$update_check_file" ]]; then
-        local last_check=$(cat "$update_check_file")
-        local time_diff=$((current_time - last_check))
-        
-        if (( time_diff < 604800 )); then
-            return 0
-        fi
-    fi
-    
-    echo "$current_time" > "$update_check_file"
-    
-    # Synchronous check for updates (disabled for performance)
-    # Auto-update functionality disabled to prevent async operations
     return 0
 }
 
