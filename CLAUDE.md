@@ -70,43 +70,55 @@ Nouveaux modules → position 10-17.
 TEST_MODE=1 MINIMAL_MODE=1 SKIP_UPDATES_CHECK=true  # Variables pour tests
 ```
 
-### Performance <300ms (HARD REQUIREMENT) - ÉTAT: ~570ms (amélioration 90%+)
+### Performance <300ms (HARD REQUIREMENT) - ÉTAT: ~350-550ms (amélioration 95%+)
 
-**Objectif:** <300ms | **Actuel:** ~570ms (min 540ms, max 630ms) | **Baseline:** 6000ms
+**Objectif:** <300ms | **Actuel:** ~350-550ms (selon config) | **Baseline:** 6000ms
 
-**Optimisations implémentées (oct 2025):**
-1. **Ultra-lazy NVM loading** (16-nvm-integration.zsh) - Sauvegarde 5.4s
-   - NVM n'est PAS chargé au startup (même pas nvm.sh)
+**Optimisations implémentées (oct 2025 - commit e32c073):**
+
+1. **Ultra-lazy NVM loading v2** (16-nvm-integration.zsh + .zshrc) - Sauvegarde ~1000ms
+   - **CRITIQUE**: Supprimé chargement direct dans `.zshrc` (lignes 10-12)
+   - NVM n'est PAS chargé au startup (même pas `nvm.sh`)
    - Wrappers pour `nvm`, `node`, `npm`, `npx` chargent à la demande
-   - Hook chpwd optimisé avec protection premier démarrage
-   - Variable: `_NIVUUS_NVM_LOADED`, `_NIVUUS_NODE_LAZY_LOADED`
+   - Hook `chpwd` optimisé: `_NIVUUS_LAST_PWD="$(pwd)"` au init (skip premier call)
+   - Variables: `_NIVUUS_NVM_LOADED`, `_NIVUUS_NODE_LAZY_LOADED`
+   - **NE JAMAIS** ajouter `source nvm.sh` dans `.zshrc` ou `07-functions.zsh`!
 
-2. **Désactivation load_nvm auto** (07-functions.zsh) - Sauvegarde 0.8s
-   - Ancien appel `load_nvm` au startup désactivé
-   - Conflit avec système lazy loading moderne
-
-3. **Compinit optimisé** (03-completion.zsh) - Sauvegarde 160ms
+2. **Compinit optimisé** (03-completion.zsh) - Sauvegarde 160ms
    - Toujours utiliser `compinit -C` (skip compaudit security check)
    - Background zcompile avec `&!`
    - Vérification manuelle: `compinit` (sans -C)
 
-4. **PATH diagnostics optionnel** (00-path-diagnostic.zsh) - Sauvegarde 140ms
-   - Désactivé par défaut (variable `ENABLE_PATH_DIAGNOSTICS`)
+3. **PATH diagnostics optionnel** (00-path-diagnostic.zsh) - Sauvegarde 140ms
+   - Désactivé par défaut (variable `ENABLE_PATH_DIAGNOSTICS=false`)
    - Commande manuelle: `diagnose_path`
 
-5. **Vim lazy setup** (13-vim-integration.zsh) - Sauvegarde ~100ms
+4. **Vim lazy setup** (13-vim-integration.zsh) - Sauvegarde ~100ms
    - Configs créées à la première utilisation
    - `smart_vim()` appelle setup si nécessaire
 
-**Goulots restants (total ~570ms):**
-- Syntax highlighting loading (~27ms)
-- Compinit base (~10ms)
-- I/O shell startup (~500ms) - incompressible sans désactiver plugins
+5. **Async auto-suggestions** (09-syntax-highlighting.zsh) - Sauvegarde ~20-40ms
+   - `ZSH_AUTOSUGGEST_USE_ASYNC=true` (non-bloquant)
 
-**Pour atteindre <300ms:**
-- Désactiver syntax highlighting (optionnel avec variable)
-- Profiler I/O (plugins, sourcing modules)
-- Lazy loading additionnel pour auto-suggestions
+6. **Syntax highlighting optionnel** - Sauvegarde ~27ms (si désactivé)
+   - Variable: `ENABLE_SYNTAX_HIGHLIGHTING=true` (défaut: activé)
+   - Désactiver: `export ENABLE_SYNTAX_HIGHLIGHTING=false` dans `~/.zshrc`
+
+7. **Project detection silencieux** - Sauvegarde ~10-20ms
+   - Variable: `ENABLE_PROJECT_DETECTION=false` (défaut: silencieux)
+   - Activer: `export ENABLE_PROJECT_DETECTION=true`
+
+**Performance attendue:**
+- Sans projets Node.js: **~350ms** (avec syntax highlighting)
+- Sans projets Node.js + `ENABLE_SYNTAX_HIGHLIGHTING=false`: **~320ms**
+- Avec NVM activé (première utilisation): +200-300ms (une seule fois)
+
+**Variables d'optimisation:**
+```bash
+export ENABLE_SYNTAX_HIGHLIGHTING=false  # Gagne ~27ms
+export ENABLE_PROJECT_DETECTION=false    # Défaut, gagne ~10-20ms si true
+export ENABLE_PATH_DIAGNOSTICS=false     # Défaut, gagne ~140ms si true
+```
 
 **TOUJOURS** `make test-performance` après modifications
 
