@@ -8,6 +8,11 @@
 if [[ -n "$ZSH_VERSION" ]]; then
     # Emacs-style key bindings
     bindkey -e
+    
+    # Backspace and Delete fix - ensure proper behavior
+    bindkey '^?' backward-delete-char                 # Backspace (DEL character)
+    bindkey '^H' backward-delete-char                 # Ctrl+H (traditional backspace)
+    bindkey '^[[3~' delete-char                       # Delete key
 
     # History search
     bindkey '^[[A' up-line-or-beginning-search
@@ -20,7 +25,6 @@ if [[ -n "$ZSH_VERSION" ]]; then
     bindkey '^[[F' end-of-line
     bindkey '^[[1;5C' forward-word                    # Ctrl+Right arrow - word navigation
     bindkey '^[[1;5D' backward-word                   # Ctrl+Left arrow - word navigation
-    bindkey '^[[3~' delete-char
 
     # Alternative word navigation bindings for compatibility
     bindkey '^[^[[C' forward-word                     # Alt+Right arrow

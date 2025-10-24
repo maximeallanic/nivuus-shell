@@ -18,12 +18,23 @@ suppress_npm_warnings() {
     if command -v npm &> /dev/null; then
         # Create/update .npmrc to suppress deprecated warnings
         local npmrc_file="$HOME/.npmrc"
-        if [[ ! -f "$npmrc_file" ]] || ! grep -q "fund=false" "$npmrc_file" 2>/dev/null; then
-            {
-                echo "fund=false"
-                echo "audit=false"
-                echo "update-notifier=false"
-            } >> "$npmrc_file"
+
+        # Create file if it doesn't exist
+        if [[ ! -f "$npmrc_file" ]]; then
+            touch "$npmrc_file"
+        fi
+
+        # Add each setting only if not already present (avoid duplicates)
+        if ! grep -q "^fund=false" "$npmrc_file" 2>/dev/null; then
+            echo "fund=false" >> "$npmrc_file"
+        fi
+
+        if ! grep -q "^audit=false" "$npmrc_file" 2>/dev/null; then
+            echo "audit=false" >> "$npmrc_file"
+        fi
+
+        if ! grep -q "^update-notifier=false" "$npmrc_file" 2>/dev/null; then
+            echo "update-notifier=false" >> "$npmrc_file"
         fi
     fi
 }
@@ -570,129 +581,335 @@ nvm_healthcheck() {
     echo "✅ NVM health check completed"
 }
 
-# Force NVM initialization
-# Try multiple initialization strategies to ensure NVM loads properly
+# =============================================================================
+# ULTRA-LAZY NVM LOADING - Load NVM itself only when needed
+# =============================================================================
+#
+# CRITICAL OPTIMIZATION: Do NOT load nvm.sh at startup!
+# Loading nvm.sh takes ~800ms, which makes it impossible to reach <300ms goal.
+#
+# Strategy: Create wrapper functions for nvm/node/npm/npx that load NVM
+# on first use. This reduces startup time to nearly zero for NVM.
 
-# Strategy 1: Check if NVM_DIR is already set and try to reload
-if [[ -n "$NVM_DIR" && -s "$NVM_DIR/nvm.sh" ]]; then
-    source "$NVM_DIR/nvm.sh"
-    if [[ -s "$NVM_DIR/bash_completion" ]]; then
-        source "$NVM_DIR/bash_completion"
+# Set NVM_DIR but don't source nvm.sh yet
+if [[ -z "$NVM_DIR" ]]; then
+    if [[ -d "$HOME/.nvm" ]]; then
+        export NVM_DIR="$HOME/.nvm"
+    elif [[ -d "/usr/local/nvm" ]]; then
+        export NVM_DIR="/usr/local/nvm"
+    elif [[ -d "/opt/nvm" ]]; then
+        export NVM_DIR="/opt/nvm"
     fi
 fi
 
-# Strategy 2: Initialize NVM if not already done
-if ! command -v nvm &> /dev/null; then
-    nvm_init 2>/dev/null || true
-fi
+# Track if NVM has been loaded
+export _NIVUUS_NVM_LOADED=false
 
-# Strategy 3: Fallback - Direct initialization from standard paths
-if ! command -v nvm &> /dev/null; then
-    for nvm_dir in "$HOME/.nvm" "/usr/local/nvm" "/opt/nvm"; do
-        if [[ -s "$nvm_dir/nvm.sh" ]]; then
-            export NVM_DIR="$nvm_dir"
-            source "$nvm_dir/nvm.sh"
-            if [[ -s "$nvm_dir/bash_completion" ]]; then
-                source "$nvm_dir/bash_completion"
-            fi
-            break
+# Function to actually load NVM (called on first use)
+_load_nvm_on_demand() {
+    # Check if already loaded
+    if [[ "$_NIVUUS_NVM_LOADED" == "true" ]]; then
+        return 0
+    fi
+
+    # Mark as loaded FIRST to prevent recursion during source
+    export _NIVUUS_NVM_LOADED=true
+
+    # Load NVM script
+    if [[ -n "$NVM_DIR" && -s "$NVM_DIR/nvm.sh" ]]; then
+        # Remove wrapper functions BEFORE sourcing to avoid conflicts
+        unfunction nvm node npm npx 2>/dev/null
+
+        # Source with explicit error handling
+        if ! source "$NVM_DIR/nvm.sh" 2>&1; then
+            echo "⚠️  Failed to load NVM script from: $NVM_DIR/nvm.sh" >&2
+            export _NIVUUS_NVM_LOADED=false
+            return 1
         fi
-    done
-fi
 
-# Set up auto-switching functionality if NVM is available
-if command -v nvm &> /dev/null; then
-    # Ensure a Node.js version is always loaded by default
-    current_node="$(nvm current 2>/dev/null || echo 'none')"
-    
-    # Only try to activate if no version is currently active AND no node binary is available
-    if [[ "$current_node" == "none" ]] || [[ "$current_node" == "system" ]] || ! command -v node &> /dev/null; then
-        # Check if we already have Node.js available (might be globally installed)
-        if command -v node &> /dev/null; then
-            # Node.js is available, just not through NVM - that's fine
-            true
+        # Load bash completion (optional, don't fail if it doesn't work)
+        if [[ -s "$NVM_DIR/bash_completion" ]]; then
+            source "$NVM_DIR/bash_completion" 2>/dev/null || true
+        fi
+    else
+        if [[ -z "$NVM_DIR" ]]; then
+            echo "⚠️  NVM_DIR is not set" >&2
         else
-            # Try to activate existing Node.js versions first (silent mode)
-            if nvm use default --silent 2>/dev/null; then
-                true
-            elif nvm use --lts --silent 2>/dev/null; then
-                true
-            elif nvm use node --silent 2>/dev/null; then
-                true
-            else
-                # Only install if user explicitly wants it (check for a flag file)
-                if [[ -f "$HOME/.nvm_auto_install" ]] || [[ "$NVM_AUTO_INSTALL" == "true" ]]; then
-                    if nvm install --lts >/dev/null 2>&1 && nvm use --lts --silent >/dev/null 2>&1; then
-                        nvm alias default "lts/*" >/dev/null 2>&1
+            echo "⚠️  NVM script not found at: $NVM_DIR/nvm.sh" >&2
+        fi
+        export _NIVUUS_NVM_LOADED=false
+        return 1
+    fi
+
+    # NVM is now loaded, but don't activate Node.js yet
+    # Let the calling context decide when to activate via _nvm_lazy_load
+    return 0
+}
+
+# =============================================================================
+# LAZY LOADING SETUP - CRITICAL FOR PERFORMANCE <300ms
+# =============================================================================
+#
+# Strategy: NVM is loaded but Node.js is NOT activated at startup.
+# Node.js is only loaded when:
+# 1. User explicitly runs node/npm/npx commands (via wrappers)
+# 2. User enters a Node.js project directory (detected via chpwd hook with cache)
+#
+# This reduces startup time from ~6s to <100ms
+
+# Track if Node.js has been lazy-loaded
+export _NIVUUS_NODE_LAZY_LOADED=false
+
+# Lazy load Node.js on first use
+_nvm_lazy_load() {
+    # Check if already loaded
+    if [[ "$_NIVUUS_NODE_LAZY_LOADED" == "true" ]] && command -v node &> /dev/null; then
+        return 0
+    fi
+
+    # Mark as loaded to prevent recursion
+    export _NIVUUS_NODE_LAZY_LOADED=true
+
+    # Remove wrapper functions to expose real commands
+    unfunction node npm npx 2>/dev/null
+
+    # Check if we're in a Node.js project to determine version
+    local target_version=""
+
+    # Priority 1: .nvmrc file
+    if [[ -f ".nvmrc" ]]; then
+        target_version="$(cat .nvmrc)"
+        nvm use "$target_version" --silent 2>/dev/null || nvm install "$target_version" >/dev/null 2>&1
+    # Priority 2: package.json engines field
+    elif [[ -f "package.json" ]]; then
+        if target_version=$(get_package_json_node_version); then
+            nvm use "${target_version}" --silent 2>/dev/null || {
+                if [[ "$NVM_AUTO_INSTALL" == "true" ]] || [[ -f "$HOME/.nvm_auto_install" ]]; then
+                    nvm install "${target_version}" >/dev/null 2>&1
+                    nvm use "${target_version}" --silent 2>/dev/null
+                fi
+            }
+        else
+            # Package.json exists but no engines, use default/LTS/stable
+            nvm use default --silent 2>/dev/null || \
+            nvm use --lts --silent 2>/dev/null || \
+            nvm use node --silent 2>/dev/null || \
+            nvm use stable --silent 2>/dev/null
+        fi
+    # Priority 3: Use default, LTS, or latest stable
+    else
+        nvm use default --silent 2>/dev/null || \
+        nvm use --lts --silent 2>/dev/null || \
+        nvm use node --silent 2>/dev/null || \
+        nvm use stable --silent 2>/dev/null
+    fi
+
+    # Fix PATH if needed
+    local current_version="$(nvm current 2>/dev/null)"
+    if [[ "$current_version" != "none" && "$current_version" != "system" ]]; then
+        local node_bin_path="$NVM_DIR/versions/node/$current_version/bin"
+        if [[ -d "$node_bin_path" ]]; then
+            # Clean up PATH and add current version
+            PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '/node/' | tr '\n' ':' | sed 's/:$//')
+            export PATH="$node_bin_path:$PATH"
+            hash -r 2>/dev/null || true
+        fi
+    fi
+
+    # Suppress npm warnings
+    suppress_npm_warnings
+
+    # Export Node.js related variables for VS Code
+    if command -v node &> /dev/null; then
+        NODE_PATH="$(npm root -g 2>/dev/null)"
+        export NODE_PATH
+        NVM_BIN="$NVM_DIR/versions/node/$(nvm current)/bin"
+        export NVM_BIN
+        NVM_INC="$NVM_DIR/versions/node/$(nvm current)/include/node"
+        export NVM_INC
+    fi
+}
+
+# Wrapper functions that trigger lazy loading of NVM itself
+if [[ -n "$NVM_DIR" && -d "$NVM_DIR" ]]; then
+    # Create wrapper for nvm command
+    nvm() {
+        if _load_nvm_on_demand; then
+            # NVM loaded successfully, call the real nvm function
+            # (which was defined by nvm.sh after we unfunction'd our wrapper)
+            nvm "$@"
+        else
+            # Failed to load NVM
+            echo "⚠️  NVM could not be loaded. Run 'nvm_debug' for diagnostics." >&2
+            return 1
+        fi
+    }
+
+    # Create wrappers for Node.js commands that load NVM and activate Node
+    node() {
+        if _load_nvm_on_demand; then
+            # Ensure Node is activated
+            if [[ "$_NIVUUS_NODE_LAZY_LOADED" != "true" ]]; then
+                _nvm_lazy_load
+            fi
+        fi
+        command node "$@"
+    }
+
+    npm() {
+        if _load_nvm_on_demand; then
+            # Ensure Node is activated
+            if [[ "$_NIVUUS_NODE_LAZY_LOADED" != "true" ]]; then
+                _nvm_lazy_load
+            fi
+        fi
+        command npm "$@"
+    }
+
+    npx() {
+        if _load_nvm_on_demand; then
+            # Ensure Node is activated
+            if [[ "$_NIVUUS_NODE_LAZY_LOADED" != "true" ]]; then
+                _nvm_lazy_load
+            fi
+        fi
+        command npx "$@"
+    }
+
+    # Optimized auto-switching on directory change
+    if [[ "$NVM_AUTO_USE" == "true" ]]; then
+        # Initialize tracking variable to current dir to prevent initial hook execution
+        # This prevents NVM from loading at shell startup, saving ~1000ms
+        export _NIVUUS_LAST_PWD="$(pwd)"
+
+        # Lightweight chpwd hook - loads NVM only when entering Node.js projects
+        nvm_auto_use_lazy() {
+            local current_dir="$(pwd)"
+
+            # Skip if same directory
+            if [[ -n "$_NIVUUS_LAST_PWD" && "$current_dir" == "$_NIVUUS_LAST_PWD" ]]; then
+                return 0
+            fi
+
+            export _NIVUUS_LAST_PWD="$current_dir"
+
+            # Check for .nvmrc in current dir or parents
+            local nvmrc_path=""
+            local search_dir="$current_dir"
+            while [[ "$search_dir" != "/" ]]; do
+                if [[ -f "$search_dir/.nvmrc" ]]; then
+                    nvmrc_path="$search_dir/.nvmrc"
+                    break
+                fi
+                search_dir="$(dirname "$search_dir")"
+            done
+
+            # Determine if we're in a Node.js project
+            local is_node_project=false
+            if [[ -n "$nvmrc_path" || -f "package.json" ]]; then
+                is_node_project=true
+            fi
+
+            # Load NVM if not loaded and we're in a Node.js project
+            if [[ "$_NIVUUS_NVM_LOADED" != "true" ]] && [[ "$is_node_project" == "true" ]]; then
+                echo "📦 Loading Node.js for project..."
+                if _load_nvm_on_demand; then
+                    # NVM loaded successfully, now activate Node
+                    _nvm_lazy_load
+                else
+                    echo "⚠️  Failed to load NVM. Run 'nvm_debug' for diagnostics." >&2
+                    return 1
+                fi
+            fi
+
+            # If NVM is loaded, manage versions based on current directory
+            if [[ "$_NIVUUS_NVM_LOADED" == "true" ]]; then
+                local should_use_default=false
+
+                if [[ -n "$nvmrc_path" ]]; then
+                    # Found .nvmrc in current dir or parent - use it
+                    local required_version="$(cat "$nvmrc_path")"
+                    local current_version="$(nvm current 2>/dev/null)"
+
+                    if [[ "$required_version" != "$current_version" ]]; then
+                        if nvm use "$required_version" --silent 2>/dev/null; then
+                            nvm_fix_path_silent
+                        else
+                            echo "⚠️  Required Node.js version $required_version not installed"
+                            echo "   Run: nvm install $required_version"
+                        fi
+                    fi
+                elif [[ -f "package.json" ]]; then
+                    # No .nvmrc but has package.json - check engines
+                    local required_version=$(get_package_json_node_version)
+                    if [[ -n "$required_version" ]]; then
+                        local current_version="$(nvm current 2>/dev/null)"
+                        local current_major="$(echo "$current_version" | sed 's/v//' | cut -d. -f1)"
+
+                        if [[ "$current_major" != "$required_version" ]]; then
+                            if nvm use "$required_version" --silent 2>/dev/null; then
+                                nvm_fix_path_silent
+                            fi
+                        fi
+                    else
+                        # package.json exists but no engines specified - ensure Node is available
+                        if [[ "$(nvm current 2>/dev/null)" == "none" || "$(nvm current 2>/dev/null)" == "system" ]]; then
+                            should_use_default=true
+                        fi
+                    fi
+                else
+                    # No Node project files - use default if available
+                    should_use_default=true
+                fi
+
+                # Revert to default if needed
+                if [[ "$should_use_default" == "true" ]]; then
+                    local current_version="$(nvm current 2>/dev/null)"
+                    # Try to use a sensible default version
+                    if [[ "$current_version" == "none" || "$current_version" == "system" ]]; then
+                        # Try default alias first, then LTS, then any installed version
+                        if ! nvm use default --silent 2>/dev/null; then
+                            if ! nvm use --lts --silent 2>/dev/null; then
+                                # Use the latest installed version
+                                local latest_version=$(nvm list | grep -v 'default' | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+                                if [[ -n "$latest_version" ]]; then
+                                    nvm use "$latest_version" --silent 2>/dev/null
+                                fi
+                            fi
+                        fi
+                        nvm_fix_path_silent
                     fi
                 fi
             fi
-        fi
-        
-        # Fix PATH if needed and Node.js was activated
-        if command -v nvm &> /dev/null && [[ "$(nvm current 2>/dev/null)" != "none" ]]; then
-            node_version="$(nvm current 2>/dev/null)"
-            if [[ "$node_version" != "none" && "$node_version" != "system" ]] && ! command -v node &> /dev/null; then
-                node_bin_path="$NVM_DIR/versions/node/$node_version/bin"
-                if [[ -d "$node_bin_path" ]]; then
-                    export PATH="$node_bin_path:$PATH"
-                    hash -r 2>/dev/null || true
-                fi
-            fi
-        fi
-        
-        # Silent final verification
-    else
-        # Node.js already active - silent check
-        # Even if already active, ensure commands are available
-        if ! command -v node &> /dev/null; then
-            node_bin_path="$NVM_DIR/versions/node/$current_node/bin"
-            if [[ -d "$node_bin_path" ]]; then
-                export PATH="$node_bin_path:$PATH"
-                hash -r 2>/dev/null || true
-            fi
-        fi
-    fi
-    
-    # Set up auto-switching on directory change
-    if [[ "$NVM_AUTO_USE" == "true" ]]; then
-        # Remove any existing nvm_auto_use from chpwd_functions to avoid duplicates
+        }
+
+        # Remove any existing nvm_auto_use from chpwd_functions
         chpwd_functions=("${chpwd_functions[@]:#nvm_auto_use}")
-        chpwd_functions+=(nvm_auto_use)
-        
-        # Initialize directory tracking and check current directory on shell start
-        export _NIVUUS_LAST_PWD=""
-        
-        # Force immediate check of current directory on shell startup
-        nvm_auto_use
-        
-        # If we're in a project but no Node.js is active, force reload
-        if [[ -f "package.json" || -f ".nvmrc" ]] && ! command -v node &> /dev/null; then
-            nvm_force_reload true  # Silent mode
-        fi
+        chpwd_functions=("${chpwd_functions[@]:#nvm_auto_use_lazy}")
+        # Add optimized version
+        chpwd_functions+=(nvm_auto_use_lazy)
     fi
-    
-    # Debug: Show NVM status on shell start (optional)
+
+    # Debug mode
     if [[ "$SHELL_DEBUG" == "true" ]]; then
-        echo "🔧 NVM initialized: $(nvm current 2>/dev/null || echo 'none')"
+        echo "🔧 NVM ultra-lazy loading configured"
+        echo "   NVM will load on first use of: nvm, node, npm, or npx"
+        echo "   Or when entering a Node.js project directory"
     fi
 else
-    # If NVM still not available, show helpful message once per session
+    # NVM not available - show warning once per session
     if [[ -z "$_NVM_WARNING_SHOWN" ]]; then
-        echo "⚠️  NVM not available. Run 'nvm_healthcheck' for diagnostics."
+        # Silent by default - only show in debug mode
+        if [[ "$SHELL_DEBUG" == "true" ]]; then
+            echo "⚠️  NVM not found. Run 'nvm_healthcheck' for diagnostics."
+        fi
         export _NVM_WARNING_SHOWN=1
     fi
 fi
 
-# Export Node.js related variables for VS Code (only if NVM is available)
-if command -v nvm &> /dev/null && command -v node &> /dev/null; then
-    NODE_PATH="$(npm root -g 2>/dev/null)"
-    export NODE_PATH
-    NVM_BIN="$NVM_DIR/versions/node/$(nvm current)/bin"
-    export NVM_BIN
-    NVM_INC="$NVM_DIR/versions/node/$(nvm current)/include/node"
-    export NVM_INC
-fi
+# Export Node.js related variables for VS Code (only after lazy load)
+# NOTE: These are set dynamically after _nvm_lazy_load is called
+# Removed from startup to maintain <300ms performance target
 
 # NVM debug function
 nvm_debug() {

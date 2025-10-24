@@ -118,32 +118,56 @@ diagnose_path() {
 # Force fix if PATH contains known problematic patterns
 if [[ "$PATH" == *"Unknown command"* ]] || [[ "$PATH" == *"share/man"* ]] || [[ "$PATH" == *"::"* ]]; then
     # Emergency clean PATH (silent fix)
-    export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/home/mallanic/.local/bin"
-    
-    # Add NVM if available
-    if [[ -d "$HOME/.nvm/versions/node/v22.16.0/bin" ]]; then
-        export PATH="$HOME/.nvm/versions/node/v22.16.0/bin:$PATH"
+    export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin"
+
+    # Add NVM Node.js if available (detect active or default version dynamically)
+    if [[ -d "$HOME/.nvm" ]]; then
+        # Try to find active/default/latest Node.js version
+        local node_bin=""
+
+        # Check for NVM default alias
+        if [[ -f "$HOME/.nvm/alias/default" ]]; then
+            local default_version="$(cat "$HOME/.nvm/alias/default")"
+            node_bin="$HOME/.nvm/versions/node/$default_version/bin"
+        fi
+
+        # Fallback: find latest installed version
+        if [[ ! -d "$node_bin" && -d "$HOME/.nvm/versions/node" ]]; then
+            node_bin="$(find "$HOME/.nvm/versions/node" -maxdepth 1 -type d -name "v*" | sort -V | tail -1)/bin"
+        fi
+
+        # Add to PATH if found
+        if [[ -d "$node_bin" ]]; then
+            export PATH="$node_bin:$PATH"
+        fi
     fi
-    
-    # Add Google Cloud SDK if available  
+
+    # Add Google Cloud SDK if available
     if [[ -d "$HOME/google-cloud-sdk/bin" ]]; then
         export PATH="$PATH:$HOME/google-cloud-sdk/bin"
     fi
-    
+
     # Add snap if available
     if [[ -d "/snap/bin" ]]; then
         export PATH="$PATH:/snap/bin"
     fi
-elif ! diagnose_path >/dev/null 2>&1; then
-    fix_corrupted_path
-    
-    # Verify fix worked (silent check)
+elif [[ "$ENABLE_PATH_DIAGNOSTICS" == "true" ]]; then
+    # PATH diagnostics disabled by default for performance (<300ms target)
+    # Set ENABLE_PATH_DIAGNOSTICS=true to enable diagnostics
+    # Manual command: diagnose_path
     if ! diagnose_path >/dev/null 2>&1; then
-        # Emergency fallback PATH
-        export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin"
+        fix_corrupted_path
+
+        # Verify fix worked (silent check)
+        if ! diagnose_path >/dev/null 2>&1; then
+            # Emergency fallback PATH
+            export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin"
+        fi
     fi
 else
-    # echo "✅ PATH is healthy"  # Commented out to reduce verbosity
+    # PATH diagnostics skipped for performance (saves ~140ms)
+    # Run 'diagnose_path' manually if you suspect PATH issues
+    true
 fi
 
 # Functions are available globally in ZSH by default

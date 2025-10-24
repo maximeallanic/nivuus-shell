@@ -7,6 +7,6 @@ if [[ -d "/opt/modern-shell" ]]; then
     done
 fi
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+# NVM loading is now handled by ultra-lazy loading in config/16-nvm-integration.zsh
+# DO NOT load nvm.sh here - it breaks the <300ms startup target!
+# NVM will be loaded automatically on first use of nvm/node/npm/npx commands

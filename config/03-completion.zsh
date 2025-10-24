@@ -17,9 +17,9 @@ if [[ -n "$ZSH_VERSION" ]]; then
     setopt COMPLETE_IN_WORD
     setopt ALWAYS_TO_END
 
-    # Correction - Disabled to prevent annoying prompts
-    setopt CORRECT
-    # setopt CORRECT_ALL
+    # Correction - Disabled to prevent annoying prompts like "correct 'claude' to '.claude'"
+    unsetopt CORRECT
+    unsetopt CORRECT_ALL
 
     # Glob
     setopt EXTENDED_GLOB
@@ -33,11 +33,15 @@ fi
 # Performance-optimized completion - only in zsh
 if [[ -n "$ZSH_VERSION" ]]; then
     autoload -Uz compinit
-    # Only rebuild dump once per day for performance
-    if [[ "$HOME/.zcompdump" -nt "$HOME/.zcompdump.zwc" ]] || [[ ! -f "$HOME/.zcompdump.zwc" ]]; then
-        compinit -d ~/.zcompdump
-    else
-        compinit -C -d ~/.zcompdump
+
+    # PERFORMANCE OPTIMIZATION: Always use -C flag to skip security check (compaudit)
+    # This saves ~160ms at startup. Security check can be run manually if needed.
+    # Run 'compinit' (without -C) manually if you want to verify file permissions.
+    compinit -C -d ~/.zcompdump
+
+    # Compile zcompdump for even faster loading next time (background compilation)
+    if [[ ! -f "$HOME/.zcompdump.zwc" ]] || [[ "$HOME/.zcompdump" -nt "$HOME/.zcompdump.zwc" ]]; then
+        zcompile "$HOME/.zcompdump" &!
     fi
 fi
 

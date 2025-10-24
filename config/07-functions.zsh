@@ -3,6 +3,12 @@
 # =============================================================================
 # INTELLIGENT FUNCTIONS & PROJECT DETECTION
 # =============================================================================
+#
+# PERFORMANCE NOTE: Project detection can add ~10-20ms per cd.
+# Set ENABLE_PROJECT_DETECTION=false to disable verbose output.
+
+# Default to silent mode for performance
+: ${ENABLE_PROJECT_DETECTION:=false}
 
 # Smart find function
 f() {
@@ -96,17 +102,22 @@ config_edit() {
 detect_project() {
     # Track current directory to avoid unnecessary operations
     local current_dir="$(pwd)"
-    
+
     # Check if directory actually changed
     if [[ -n "$_NIVUUS_LAST_PROJECT_PWD" && "$current_dir" == "$_NIVUUS_LAST_PROJECT_PWD" ]]; then
         return 0  # Same directory, do nothing
     fi
-    
+
     # Update last directory
     export _NIVUUS_LAST_PROJECT_PWD="$current_dir"
-    
+
+    # Skip verbose output unless explicitly enabled (performance optimization)
+    if [[ "$ENABLE_PROJECT_DETECTION" != "true" ]]; then
+        return 0
+    fi
+
     local project_type=""
-    
+
     if [[ -f package.json ]]; then
         project_type="Node.js"
         echo "📦 $project_type project detected"
@@ -130,7 +141,7 @@ detect_project() {
         project_type="Docker"
         echo "🐳 $project_type project detected"
     fi
-    
+
     # Auto-suggestions based on project
     case $project_type in
         "Node.js")
@@ -218,20 +229,24 @@ sysinfo() {
 }
 
 # =============================================================================
-# NVM LAZY LOADING (PERFORMANCE BOOST)
+# NVM LAZY LOADING - MOVED TO 16-nvm-integration.zsh
 # =============================================================================
+#
+# NOTE: NVM loading is now handled by the ultra-lazy loading system in
+# 16-nvm-integration.zsh for maximum performance (<300ms startup target).
+# This legacy code is kept for backward compatibility but is NOT executed.
 
-# NVM lazy loading function
+# Legacy NVM lazy loading function (kept for manual use if needed)
 load_nvm() {
     # Skip if NVM is already loaded
     if command -v nvm &> /dev/null; then
         return 0
     fi
-    
+
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-    
+
     # Auto-load default or LTS Node.js version
     if command -v nvm &> /dev/null; then
         # Try to use .nvmrc if present, otherwise use default or LTS
@@ -243,7 +258,10 @@ load_nvm() {
     fi
 }
 
-# Load NVM if not already available
-if ! command -v npm &> /dev/null; then
-    load_nvm
-fi
+# DISABLED: Auto-loading moved to 16-nvm-integration.zsh for performance
+# DO NOT uncomment - this breaks the <300ms startup target!
+# The ultra-lazy loading system in 16-nvm-integration.zsh handles NVM loading
+# on first use of nvm/node/npm/npx commands or when entering Node.js projects.
+# if ! command -v npm &> /dev/null; then
+#     load_nvm
+# fi
