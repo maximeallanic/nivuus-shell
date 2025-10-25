@@ -245,7 +245,14 @@ jobs:
 
       - name: Check for Secrets
         run: |
-          if grep -r "password\|secret\|token" --include="*.sh" --include="*.zsh" . | grep -v "test" | grep -v "example" | grep -v ".github"; then
+          # Check for actual secret assignments (password=, secret=, token=, etc.)
+          # Exclude: test files, examples, .github, and ZSH style names (unknown-token, etc.)
+          if grep -rE "(password|secret|token)\s*=" --include="*.sh" --include="*.zsh" . | \
+             grep -v "test" | \
+             grep -v "example" | \
+             grep -v ".github" | \
+             grep -v "ZSH_HIGHLIGHT_STYLES" | \
+             grep -v "unknown-token"; then
             echo "Potential secrets found"
             exit 1
           fi
