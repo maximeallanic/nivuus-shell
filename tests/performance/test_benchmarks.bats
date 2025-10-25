@@ -72,19 +72,23 @@ EOF
 
 @test "Completion system loads quickly" {
     local start_time=$(date +%s%N)
-    
-    zsh -c "
-        source $PROJECT_ROOT/config/01-performance.zsh
-        source $PROJECT_ROOT/config/03-completion.zsh
+
+    # Use run for proper BATS error handling, redirect timing overhead
+    run zsh -c "
+        source '$PROJECT_ROOT/config/01-performance.zsh'
+        source '$PROJECT_ROOT/config/03-completion.zsh'
         autoload -Uz compinit
         compinit -d '$TEST_HOME/.zcompdump'
-    " 2>/dev/null
-    
+    "
+
     local end_time=$(date +%s%N)
     local duration_ms=$(((end_time - start_time) / 1000000))
-    
+
+    # Check that command succeeded
+    [ "$status" -eq 0 ]
+
     color_output "blue" "Completion init time: ${duration_ms}ms"
-    
+
     # Should load in under 100ms
     [ "$duration_ms" -lt 100 ] || {
         color_output "yellow" "⚠️  Completion loading time (${duration_ms}ms) is slow"
