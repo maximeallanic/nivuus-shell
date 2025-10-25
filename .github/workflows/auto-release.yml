@@ -219,22 +219,20 @@ jobs:
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
           BUMP_TYPE="${{ steps.new_version.outputs.bump_type }}"
+          
+          echo "chore(release): bump version to $NEW_VERSION" > /tmp/commit_msg.txt
+          echo "" >> /tmp/commit_msg.txt
+          echo "Automated release created by CI/CD pipeline." >> /tmp/commit_msg.txt
+          echo "" >> /tmp/commit_msg.txt
+          echo "- Version: $NEW_VERSION" >> /tmp/commit_msg.txt
+          echo "- Bump type: $BUMP_TYPE" >> /tmp/commit_msg.txt
+          echo "- CI tests: All passed" >> /tmp/commit_msg.txt
+          echo "" >> /tmp/commit_msg.txt
+          echo "🤖 Generated with [Claude Code](https://claude.com/claude-code)" >> /tmp/commit_msg.txt
+          echo "" >> /tmp/commit_msg.txt
+          echo "Co-Authored-By: Claude <noreply@anthropic.com>" >> /tmp/commit_msg.txt
 
-          git commit -m "$(cat <<EOF
-chore(release): bump version to $NEW_VERSION
-
-Automated release created by CI/CD pipeline.
-
-- Version: $NEW_VERSION
-- Bump type: $BUMP_TYPE
-- CI tests: All passed
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-EOF
-)"
-
+          git commit -F /tmp/commit_msg.txt
           git tag -a "v$NEW_VERSION" -m "Release version $NEW_VERSION"
 
           echo "Created commit and tag v$NEW_VERSION"
@@ -252,46 +250,40 @@ EOF
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
 
-          cat > /tmp/release_notes.md << 'EOF'
-# Nivuus Shell v$NEW_VERSION
-
-Automated release created from master branch after all CI tests passed successfully.
-
-## Installation
-
-### Quick Install (Latest)
-\`\`\`bash
-curl -fsSL https://github.com/maximeallanic/nivuus-shell/releases/latest/download/install.sh | bash
-\`\`\`
-
-### Specific Version
-\`\`\`bash
-curl -fsSL https://github.com/maximeallanic/nivuus-shell/releases/download/v$NEW_VERSION/install.sh | bash
-\`\`\`
-
-## What's New
-
-EOF
-
+          echo "# Nivuus Shell v$NEW_VERSION" > /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "Automated release created from master branch after all CI tests passed successfully." >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "## Installation" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "### Quick Install (Latest)" >> /tmp/release_notes.md
+          echo '```bash' >> /tmp/release_notes.md
+          echo "curl -fsSL https://github.com/maximeallanic/nivuus-shell/releases/latest/download/install.sh | bash" >> /tmp/release_notes.md
+          echo '```' >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "### Specific Version" >> /tmp/release_notes.md
+          echo '```bash' >> /tmp/release_notes.md
+          echo "curl -fsSL https://github.com/maximeallanic/nivuus-shell/releases/download/v$NEW_VERSION/install.sh | bash" >> /tmp/release_notes.md
+          echo '```' >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "## What's New" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          
           cat /tmp/changelog_entry.md >> /tmp/release_notes.md
-
-          cat >> /tmp/release_notes.md << 'EOF'
-
-## CI/CD Status
-- ✅ All CI tests passed
-- ✅ Syntax checks passed
-- ✅ Unit tests passed
-- ✅ Integration tests passed
-- ✅ Performance tests passed
-- ✅ Compatibility tests passed
-- ✅ Security checks passed
-
----
-
-**Full Changelog**: https://github.com/maximeallanic/nivuus-shell/blob/master/CHANGELOG.md
-EOF
-
-          sed -i "s/\$NEW_VERSION/$NEW_VERSION/g" /tmp/release_notes.md
+          
+          echo "" >> /tmp/release_notes.md
+          echo "## CI/CD Status" >> /tmp/release_notes.md
+          echo "- ✅ All CI tests passed" >> /tmp/release_notes.md
+          echo "- ✅ Syntax checks passed" >> /tmp/release_notes.md
+          echo "- ✅ Unit tests passed" >> /tmp/release_notes.md
+          echo "- ✅ Integration tests passed" >> /tmp/release_notes.md
+          echo "- ✅ Performance tests passed" >> /tmp/release_notes.md
+          echo "- ✅ Compatibility tests passed" >> /tmp/release_notes.md
+          echo "- ✅ Security checks passed" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "---" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+          echo "**Full Changelog**: https://github.com/maximeallanic/nivuus-shell/blob/master/CHANGELOG.md" >> /tmp/release_notes.md
 
       - name: Wait for tag to propagate
         if: steps.check_version.outputs.exists == 'false'
