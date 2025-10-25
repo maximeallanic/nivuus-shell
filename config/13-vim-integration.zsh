@@ -158,7 +158,12 @@ set shiftwidth=4
 set expandtab
 set backspace=indent,eol,start
 
-" System clipboard integration
+\" Fix backspace behavior - some terminals send Delete code instead of Backspace  
+inoremap <Del> <C-h>
+inoremap <kDel> <C-h>
+inoremap <BS> <C-h>
+
+\" System clipboard integration
 set clipboard=unnamedplus
 if has('\''clipboard'\'')
     set clipboard=unnamed,unnamedplus
@@ -461,7 +466,12 @@ set shiftwidth=4
 set expandtab
 set backspace=indent,eol,start
 
-" Status line optimized for web
+\" Fix backspace behavior for SSH/remote environments
+inoremap <Del> <C-h>
+inoremap <kDel> <C-h>
+inoremap <BS> <C-h>
+
+\" Status line optimized for web
 set laststatus=2
 set statusline=%F\ [%l:%c]\ %p%%\ [SHIFT+CLICK\ TO\ SELECT]
 
@@ -518,8 +528,13 @@ smart_vim() {
         elif [[ -f "/etc/vim/vimrc.ssh" ]]; then
             command vim -u "/etc/vim/vimrc.ssh" "$file"
         else
-            vim_ssh_setup
-            command vim -u "$HOME/.vimrc.ssh" "$file"
+            # Try to setup SSH config, fallback to default vim if it fails
+            if vim_ssh_setup 2>/dev/null && [[ -f "$HOME/.vimrc.ssh" ]]; then
+                command vim -u "$HOME/.vimrc.ssh" "$file"
+            else
+                echo "⚠️  Vim SSH setup failed, using default config" >&2
+                command vim "$file"
+            fi
         fi
     else
         # Local usage, use modern config
@@ -528,20 +543,19 @@ smart_vim() {
         elif [[ -f "/etc/vim/vimrc.modern" ]]; then
             command vim -u "/etc/vim/vimrc.modern" "$file"
         else
-            command vim "$file"
+            # Try to setup modern config, fallback to default vim if it fails
+            if setup_vim_config 2>/dev/null && [[ -f "$HOME/.vimrc.modern" ]]; then
+                command vim -u "$HOME/.vimrc.modern" "$file"
+            else
+                command vim "$file"
+            fi
         fi
     fi
 }
 
-# Auto-setup on module load (user config only) - only if not already configured
-if [[ ! -f "$HOME/.vimrc.modern" ]] && [[ ! -f "/etc/vim/vimrc.modern" ]]; then
-    setup_vim_config
-fi
-
-# Auto-setup SSH config if needed
-if [[ ! -f "$HOME/.vimrc.ssh" ]] && [[ ! -f "/etc/vim/vimrc.ssh" ]]; then
-    vim_ssh_setup
-fi
+# LAZY SETUP: Vim configs are created on first use instead of at startup
+# This saves ~100-200ms during shell initialization
+# The smart_vim() function will call setup if needed
 
 # Help function
 vim_help() {
