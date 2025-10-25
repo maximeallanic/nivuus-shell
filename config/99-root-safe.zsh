@@ -11,7 +11,8 @@ fi
 # Enhanced root detection (covers su, sudo -i, problematic environments, etc.)
 is_root_environment() {
     # Direct root checks - if we're actually root, check for problematic conditions
-    if [[ $EUID -eq 0 ]] || [[ $UID -eq 0 ]] || [[ "$(whoami 2>/dev/null)" == "root" ]]; then
+    # Protect whoami call with || true to handle missing/broken whoami
+    if [[ $EUID -eq 0 ]] || [[ $UID -eq 0 ]] || [[ "$(whoami 2>/dev/null || true)" == "root" ]]; then
         # Only activate root-safe mode if we're in a truly problematic environment
         [[ -n "$SUDO_USER" && "$PATH" == "/usr/bin:/bin" ]] || \
         [[ "$LANG" == "C" && -z "$DISPLAY" && ! -w "$HOME" ]] || \
