@@ -13,6 +13,11 @@ on:
 env:
   BATS_VERSION: '1.8.2'
 
+# Ensure only one test run per branch at a time
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Fast syntax check - runs first to fail fast
   syntax-check:
