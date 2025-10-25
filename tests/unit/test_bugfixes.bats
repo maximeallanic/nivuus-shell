@@ -16,6 +16,11 @@ teardown() {
 # =============================================================================
 
 @test "NVM wrapper does not cause infinite recursion" {
+    # Skip if NVM is not installed (this test needs actual NVM)
+    if [[ ! -s "$HOME/.nvm/nvm.sh" ]]; then
+        skip "NVM not installed - cannot test wrapper recursion"
+    fi
+
     # Set up minimal NVM environment
     export NVM_DIR="$HOME/.nvm"
     export _NIVUUS_NVM_LOADED=false
