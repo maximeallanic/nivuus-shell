@@ -228,8 +228,8 @@ EOF
     if ! command -v npm >/dev/null 2>&1; then
         skip "npm not available for global package testing"
     fi
-    
-    run -127 zsh -c "
+
+    run zsh -c "
         source '$TEST_HOME/.zshrc'
         npm config get prefix 2>/dev/null
     "
@@ -238,6 +238,7 @@ EOF
     elif [ "$status" -ne 0 ]; then
         skip "npm config failed in test environment (status: $status)"
     fi
+    [ "$status" -eq 0 ]
     [ -n "$output" ]
     
     local npm_prefix="$output"
@@ -259,11 +260,11 @@ EOF
     if ! command -v node >/dev/null 2>&1; then
         skip "Node.js not available for module resolution testing"
     fi
-    
+
     cd "$TEST_PROJECT"
-    
+
     # Test built-in module resolution
-    run -127 zsh -c "
+    run zsh -c "
         cd '$TEST_PROJECT'
         source '$TEST_HOME/.zshrc'
         node -e \"console.log('Built-in modules test:'); console.log(require('path').resolve('.'))\" 2>/dev/null
@@ -273,6 +274,7 @@ EOF
     elif [ "$status" -ne 0 ]; then
         skip "Node.js execution failed in test environment (status: $status)"
     fi
+    [ "$status" -eq 0 ]
     assert_contains "$output" "Built-in modules test:"
     
     color_output "green" "✅ Node.js module resolution works"
