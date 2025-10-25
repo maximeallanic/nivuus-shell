@@ -59,8 +59,8 @@ teardown() {
     
     # Test simple Node.js execution time
     local start_time=$(date +%s%N)
-    
-    run -127 zsh -c "
+
+    run -0 zsh -c "
         source '$TEST_HOME/.zshrc'
         node -e 'console.log(\"Performance test\")' 2>/dev/null
     "
@@ -91,8 +91,8 @@ teardown() {
     
     # Test npm version command performance
     local start_time=$(date +%s%N)
-    
-    run -127 zsh -c "
+
+    run -0 zsh -c "
         source '$TEST_HOME/.zshrc'
         npm --version 2>/dev/null
     "
@@ -122,9 +122,9 @@ teardown() {
     fi
     
     local start_time=$(date +%s%N)
-    
+
     # Run multiple Node.js commands
-    run -127 zsh -c "
+    run -0 zsh -c "
         source '$TEST_HOME/.zshrc'
         node --version 2>/dev/null
         node -e 'console.log(process.platform)' 2>/dev/null
