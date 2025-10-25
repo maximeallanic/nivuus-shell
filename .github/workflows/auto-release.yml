@@ -144,36 +144,39 @@ jobs:
           FIXES=$(echo "$COMMITS" | grep -iE "^- fix:" || echo "")
           OTHERS=$(echo "$COMMITS" | grep -viE "^- (feat|fix):" || echo "")
 
-          # Create changelog entry
-          CHANGELOG_ENTRY="## [$NEW_VERSION] - $DATE
+          # Create changelog entry using heredoc
+          cat > /tmp/changelog_entry.md << EOF
+          ## [$NEW_VERSION] - $DATE
 
-### Summary
-Automatic release created from master branch (${BUMP_TYPE} version bump).
-"
+          ### Summary
+          Automatic release created from master branch (${BUMP_TYPE} version bump).
+          EOF
 
           if [[ -n "$FEATURES" ]]; then
-            CHANGELOG_ENTRY="$CHANGELOG_ENTRY
+            cat >> /tmp/changelog_entry.md << EOF
 
-### Features
-$FEATURES"
+          ### Features
+          $FEATURES
+          EOF
           fi
 
           if [[ -n "$FIXES" ]]; then
-            CHANGELOG_ENTRY="$CHANGELOG_ENTRY
+            cat >> /tmp/changelog_entry.md << EOF
 
-### Bug Fixes
-$FIXES"
+          ### Bug Fixes
+          $FIXES
+          EOF
           fi
 
           if [[ -n "$OTHERS" ]]; then
-            CHANGELOG_ENTRY="$CHANGELOG_ENTRY
+            cat >> /tmp/changelog_entry.md << EOF
 
-### Other Changes
-$OTHERS"
+          ### Other Changes
+          $OTHERS
+          EOF
           fi
 
-          # Save to file
-          echo "$CHANGELOG_ENTRY" > /tmp/changelog_entry.md
+          # Display changelog
           cat /tmp/changelog_entry.md
 
       - name: Update VERSION file
