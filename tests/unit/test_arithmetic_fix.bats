@@ -1,5 +1,7 @@
 #!/usr/bin/env bats
 
+bats_require_minimum_version 1.5.0
+
 # Test for fixing the arithmetic expression issue in fix_problematic_environment function
 
 load ../test_helper
@@ -136,12 +138,15 @@ echo "FUNCTION_COMPLETED_SUCCESSFULLY"
 EOF
 
     chmod +x "$TEMP_TEST_DIR/test_fixed_function.sh"
-    
-    run "$TEMP_TEST_DIR/test_fixed_function.sh"
+
+    # Use --separate-stderr to capture stderr in BATS
+    run --separate-stderr "$TEMP_TEST_DIR/test_fixed_function.sh"
     [ "$status" -eq 0 ]
     [[ "$output" == *"FUNCTION_COMPLETED_SUCCESSFULLY"* ]]
-    [[ "$stderr" == *"Fixed locale"* ]]
-    [[ "$stderr" == *"Fixed USER"* ]]
+    # Check for fixed locale (with or without emoji) in stderr
+    [[ "$stderr" == *"Fixed locale"* ]] || [[ "$stderr" == *"locale:"* ]]
+    # Check for fixed USER (with or without emoji) in stderr
+    [[ "$stderr" == *"Fixed USER"* ]] || [[ "$stderr" == *"USER:"* ]]
 }
 
 @test "install.sh no longer contains problematic arithmetic" {

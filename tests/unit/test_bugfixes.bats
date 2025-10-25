@@ -118,11 +118,16 @@ teardown() {
 @test "smart_vim handles missing SSH config gracefully" {
     load_config_module "13-vim-integration.zsh"
 
-    # Remove any existing vim configs
-    rm -f "$HOME/.vimrc.ssh" "/etc/vim/vimrc.ssh"
+    # Remove user vim configs (not system files)
+    rm -f "$HOME/.vimrc.ssh"
+    # Only remove system files if we have permission
+    [[ -w "/etc/vim/vimrc.ssh" ]] && sudo rm -f "/etc/vim/vimrc.ssh" 2>/dev/null || true
 
     # Mock vim_ssh_setup to fail
     vim_ssh_setup() { return 1; }
+
+    # Mock vim command to not actually launch vim
+    vim() { echo "vim called with: $@"; return 0; }
 
     # Set SSH environment
     export SSH_CLIENT="1.2.3.4 1234 22"
@@ -130,19 +135,24 @@ teardown() {
     # Test that smart_vim doesn't crash
     run smart_vim /tmp/testfile
 
-    # Should use default vim instead of crashing
-    # Exit code should be from vim command, not from setup failure
-    [[ "$status" -ne 0 ]] || [[ "$output" != *"vim_ssh_setup"* ]]
+    # Should succeed (fallback to default vim)
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"vim called"* ]]
 }
 
 @test "smart_vim handles missing modern config gracefully" {
     load_config_module "13-vim-integration.zsh"
 
-    # Remove any existing vim configs
-    rm -f "$HOME/.vimrc.modern" "/etc/vim/vimrc.modern"
+    # Remove user vim configs (not system files)
+    rm -f "$HOME/.vimrc.modern"
+    # Only remove system files if we have permission
+    [[ -w "/etc/vim/vimrc.modern" ]] && sudo rm -f "/etc/vim/vimrc.modern" 2>/dev/null || true
 
     # Mock setup_vim_config to fail
     setup_vim_config() { return 1; }
+
+    # Mock vim command to not actually launch vim
+    vim() { echo "vim called with: $@"; return 0; }
 
     # Unset SSH environment (local usage)
     unset SSH_CLIENT SSH_TTY
@@ -151,7 +161,8 @@ teardown() {
     run smart_vim /tmp/testfile
 
     # Should fallback to default vim
-    [[ "$status" -ne 0 ]] || [[ "$output" != *"setup_vim_config"* ]]
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"vim called"* ]]
 }
 
 # =============================================================================
