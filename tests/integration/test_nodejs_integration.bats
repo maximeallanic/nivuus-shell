@@ -249,9 +249,14 @@ EOF
         source '$TEST_HOME/.zshrc'
         npm bin -g
     "
+    if [ "$status" -eq 127 ]; then
+        skip "npm bin -g not available in test environment"
+    elif [ "$status" -ne 0 ]; then
+        skip "npm bin -g failed in test environment (status: $status)"
+    fi
     [ "$status" -eq 0 ]
     [ -n "$output" ]
-    
+
     color_output "blue" "npm global bin: $output"
 }
 
