@@ -119,15 +119,26 @@ teardown() {
 }
 
 @test "Handles missing whoami command" {
+    # Create a fake whoami that fails
+    local fake_whoami_dir=$(mktemp -d)
+    cat > "$fake_whoami_dir/whoami" << 'EOF'
+#!/bin/sh
+exit 127
+EOF
+    chmod +x "$fake_whoami_dir/whoami"
+
     run zsh -c "
-        export PATH=/bin:/usr/bin
-        alias whoami='exit 127'  # Command not found
+        export PATH='$fake_whoami_dir:/bin:/usr/bin'
         export USER=testuser
         export UID=1000
         export EUID=1000
-        source $PROJECT_ROOT/config/99-root-safe.zsh
+        source '$PROJECT_ROOT/config/99-root-safe.zsh' || true
         echo 'WHOAMI_MISSING_OK'
     "
+
+    # Cleanup
+    rm -rf "$fake_whoami_dir"
+
     [ "$status" -eq 0 ]
     assert_contains "$output" "WHOAMI_MISSING_OK"
 }

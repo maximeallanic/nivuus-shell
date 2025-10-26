@@ -252,8 +252,8 @@ EOF
     export MINIMAL_MODE=1
     export SKIP_UPDATES_CHECK=true
 
-    # Load all config modules
-    for config_file in "$ZSH_CONFIG_DIR"/config/*.zsh; do
+    # Load all config modules using PROJECT_ROOT
+    for config_file in "$PROJECT_ROOT"/config/*.zsh; do
         [[ -r "$config_file" ]] && source "$config_file" || {
             echo "Failed to load: $config_file"
             return 1
