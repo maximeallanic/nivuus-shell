@@ -400,21 +400,26 @@ nvm_healthcheck() {
 # ULTRA-LAZY NVM LOADING - Load NVM itself only when needed
 # =============================================================================
 #
-# CRITICAL OPTIMIZATION: Do NOT load nvm.sh at startup!
+# CRITICAL OPTIMIZATION: Do NOT load nvm.sh at startup by default!
 # Loading nvm.sh takes ~800ms, which makes it impossible to reach <300ms goal.
 #
 # Strategy: Create wrapper functions for nvm/node/npm/npx that load NVM
 # on first use. This reduces startup time to nearly zero for NVM.
+#
+# OVERRIDE: Set NIVUUS_NVM_NO_LAZY=true to disable lazy loading and load
+# NVM/Node.js immediately at startup (useful for CI/CD, scripts, etc.)
 
 # Set NVM_DIR but don't source nvm.sh yet
-if [[ -z "$NVM_DIR" ]]; then
-    if [[ -d "$HOME/.nvm" ]]; then
-        export NVM_DIR="$HOME/.nvm"
-    elif [[ -d "/usr/local/nvm" ]]; then
-        export NVM_DIR="/usr/local/nvm"
-    elif [[ -d "/opt/nvm" ]]; then
-        export NVM_DIR="/opt/nvm"
-    fi
+# CRITICAL: Always validate and correct NVM_DIR to prevent stale paths
+if [[ -d "$HOME/.nvm" ]]; then
+    export NVM_DIR="$HOME/.nvm"
+elif [[ -d "/usr/local/nvm" ]]; then
+    export NVM_DIR="/usr/local/nvm"
+elif [[ -d "/opt/nvm" ]]; then
+    export NVM_DIR="/opt/nvm"
+elif [[ -n "$NVM_DIR" && ! -d "$NVM_DIR" ]]; then
+    # NVM_DIR is set but invalid - unset it
+    unset NVM_DIR
 fi
 
 # Track if NVM has been loaded
@@ -556,8 +561,24 @@ _nvm_lazy_load() {
     fi
 }
 
-# Wrapper functions that trigger lazy loading of NVM itself
-if [[ -n "$NVM_DIR" && -d "$NVM_DIR" ]]; then
+# =============================================================================
+# NO-LAZY MODE: Load NVM immediately if NIVUUS_NVM_NO_LAZY is set
+# =============================================================================
+if [[ "$NIVUUS_NVM_NO_LAZY" == "true" ]]; then
+    if [[ -n "$NVM_DIR" && -d "$NVM_DIR" ]]; then
+        if _load_nvm_on_demand; then
+            _nvm_lazy_load
+            [[ "$SHELL_DEBUG" == "true" ]] && echo "✅ NVM loaded immediately (NIVUUS_NVM_NO_LAZY=true)"
+        else
+            echo "⚠️  Failed to load NVM in no-lazy mode" >&2
+        fi
+    fi
+fi
+
+# =============================================================================
+# LAZY MODE: Wrapper functions that trigger lazy loading of NVM on first use
+# =============================================================================
+if [[ -n "$NVM_DIR" && -d "$NVM_DIR" && "$NIVUUS_NVM_NO_LAZY" != "true" ]]; then
     # Create wrapper for nvm command
     nvm() {
         if _load_nvm_on_demand; then
@@ -803,8 +824,8 @@ if [[ -n "$NVM_DIR" && -d "$NVM_DIR" ]]; then
         fi
     }
 
-    # Register the hook if not already loaded
-    if [[ "$_NIVUUS_FIRST_PROMPT_LOADED" != "true" ]]; then
+    # Register the hook if not already loaded and not in no-lazy mode
+    if [[ "$_NIVUUS_FIRST_PROMPT_LOADED" != "true" && "$NIVUUS_NVM_NO_LAZY" != "true" ]]; then
         precmd_functions+=(_nvm_first_prompt_load)
     fi
 

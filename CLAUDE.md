@@ -82,6 +82,7 @@ TEST_MODE=1 MINIMAL_MODE=1 SKIP_UPDATES_CHECK=true  # Variables pour tests
    - Wrappers pour `nvm`, `node`, `npm`, `npx` chargent à la demande
    - Hook `chpwd` optimisé: `_NIVUUS_LAST_PWD="$(pwd)"` au init (skip premier call)
    - Variables: `_NIVUUS_NVM_LOADED`, `_NIVUUS_NODE_LAZY_LOADED`
+   - **Override**: `export NIVUUS_NVM_NO_LAZY=true` pour charger NVM immédiatement (CI/CD)
    - **NE JAMAIS** ajouter `source nvm.sh` dans `.zshrc` ou `07-functions.zsh`!
 
 2. **Compinit optimisé** (03-completion.zsh) - Sauvegarde 160ms
@@ -118,6 +119,7 @@ TEST_MODE=1 MINIMAL_MODE=1 SKIP_UPDATES_CHECK=true  # Variables pour tests
 export ENABLE_SYNTAX_HIGHLIGHTING=false  # Gagne ~27ms
 export ENABLE_PROJECT_DETECTION=false    # Défaut, gagne ~10-20ms si true
 export ENABLE_PATH_DIAGNOSTICS=false     # Défaut, gagne ~140ms si true
+export NIVUUS_NVM_NO_LAZY=true           # Charge NVM immédiatement (coûte ~200-300ms, utile pour CI/CD)
 ```
 
 **TOUJOURS** `make test-performance` après modifications
