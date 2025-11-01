@@ -14,11 +14,17 @@ if [[ -n "$ZSH_VERSION" ]]; then
     bindkey '^H' backward-delete-char                 # Ctrl+H (traditional backspace)
     bindkey '^[[3~' delete-char                       # Delete key
 
-    # History search
-    bindkey '^[[A' up-line-or-beginning-search
-    bindkey '^[[B' down-line-or-beginning-search
+    # History search with prefix filtering
+    bindkey '^[[A' up-line-or-beginning-search      # Up arrow - search backward with prefix
+    bindkey '^[[B' down-line-or-beginning-search    # Down arrow - search forward with prefix
+    bindkey '^[OA' up-line-or-beginning-search      # Up arrow (application mode)
+    bindkey '^[OB' down-line-or-beginning-search    # Down arrow (application mode)
     bindkey '^R' history-incremental-search-backward
     bindkey '^S' history-incremental-search-forward
+    
+    # Alternative history search bindings for compatibility
+    bindkey '^P' up-line-or-beginning-search        # Ctrl+P - previous command with prefix
+    bindkey '^N' down-line-or-beginning-search      # Ctrl+N - next command with prefix
 
     # Navigation
     bindkey '^[[H' beginning-of-line

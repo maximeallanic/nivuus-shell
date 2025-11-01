@@ -1,0 +1,339 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  BATS_VERSION: '1.8.2'
+
+# Ensure only one test run per branch at a time
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast syntax check - runs first to fail fast
+  syntax-check:
+    name: Syntax Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache ZSH
+        uses: actions/cache@v3
+        with:
+          path: |
+            /usr/bin/zsh
+            /usr/share/zsh
+          key: ${{ runner.os }}-zsh-${{ hashFiles('**/*.zsh') }}
+          restore-keys: |
+            ${{ runner.os }}-zsh-
+
+      - name: Install ZSH
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y zsh shellcheck
+
+      - name: Syntax Check (Make)
+        run: make test-syntax
+
+      - name: ShellCheck
+        run: |
+          shellcheck --version
+          make lint
+
+  # Unit tests - core functionality
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: syntax-check
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04, ubuntu-22.04, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache BATS
+        id: cache-bats
+        uses: actions/cache@v3
+        with:
+          path: .bats
+          key: ${{ runner.os }}-bats-${{ env.BATS_VERSION }}
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y zsh git curl wget time
+
+      - name: Install BATS
+        if: steps.cache-bats.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch v${{ env.BATS_VERSION }} https://github.com/bats-core/bats-core.git /tmp/bats
+          mkdir -p .bats
+          cp -r /tmp/bats/* .bats/
+          chmod +x .bats/bin/bats
+
+      - name: Setup BATS PATH
+        run: echo "${{ github.workspace }}/.bats/bin" >> $GITHUB_PATH
+
+      - name: Run Unit Tests
+        run: make test-unit
+        env:
+          TEST_MODE: 1
+          MINIMAL_MODE: 1
+          SKIP_UPDATES_CHECK: true
+
+  # Integration tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: syntax-check
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache BATS
+        uses: actions/cache@v3
+        with:
+          path: .bats
+          key: ${{ runner.os }}-bats-${{ env.BATS_VERSION }}
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y zsh git curl wget
+
+          # Install Node.js via nvm for integration tests
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          nvm install --lts
+
+      - name: Install BATS
+        run: |
+          git clone --depth 1 --branch v${{ env.BATS_VERSION }} https://github.com/bats-core/bats-core.git /tmp/bats
+          mkdir -p .bats
+          cp -r /tmp/bats/* .bats/
+          chmod +x .bats/bin/bats
+
+      - name: Setup PATH
+        run: echo "${{ github.workspace }}/.bats/bin" >> $GITHUB_PATH
+
+      - name: Run Integration Tests
+        run: make test-integration
+        env:
+          TEST_MODE: 1
+          SKIP_UPDATES_CHECK: true
+
+  # Performance tests
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: syntax-check
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache BATS
+        uses: actions/cache@v3
+        with:
+          path: .bats
+          key: ${{ runner.os }}-bats-${{ env.BATS_VERSION }}
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y zsh git time bc
+
+      - name: Install BATS
+        run: |
+          git clone --depth 1 --branch v${{ env.BATS_VERSION }} https://github.com/bats-core/bats-core.git /tmp/bats
+          mkdir -p .bats
+          cp -r /tmp/bats/* .bats/
+          chmod +x .bats/bin/bats
+
+      - name: Setup PATH
+        run: echo "${{ github.workspace }}/.bats/bin" >> $GITHUB_PATH
+
+      - name: Run Performance Tests
+        run: make test-performance
+        env:
+          TEST_MODE: 1
+          MINIMAL_MODE: 1
+
+      - name: Upload Performance Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results-${{ github.sha }}
+          path: |
+            test-report.txt
+            **/*.benchmark.log
+          retention-days: 30
+
+  # Compatibility tests - multi-OS
+  compatibility-tests:
+    name: Compatibility (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: syntax-check
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04, ubuntu-22.04, macos-latest]
+        include:
+          - os: ubuntu-20.04
+            install-cmd: 'sudo apt-get update -qq && sudo apt-get install -y zsh git curl'
+          - os: ubuntu-22.04
+            install-cmd: 'sudo apt-get update -qq && sudo apt-get install -y zsh git curl'
+          - os: macos-latest
+            install-cmd: 'brew install zsh git'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache BATS
+        uses: actions/cache@v3
+        with:
+          path: .bats
+          key: ${{ matrix.os }}-bats-${{ env.BATS_VERSION }}
+
+      - name: Install Dependencies
+        run: ${{ matrix.install-cmd }}
+
+      - name: Install BATS
+        run: |
+          git clone --depth 1 --branch v${{ env.BATS_VERSION }} https://github.com/bats-core/bats-core.git /tmp/bats
+          mkdir -p .bats
+          cp -r /tmp/bats/* .bats/
+          chmod +x .bats/bin/bats
+
+      - name: Setup PATH
+        run: echo "${{ github.workspace }}/.bats/bin" >> $GITHUB_PATH
+
+      - name: Run Compatibility Tests
+        run: make test-compatibility
+        env:
+          TEST_MODE: 1
+          SKIP_UPDATES_CHECK: true
+
+  # Security checks
+  security-check:
+    name: Security Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: './install'
+          format: gcc
+          severity: warning
+
+      - name: Check for Secrets
+        run: |
+          # Check for actual secret assignments (password=, secret=, token=, etc.)
+          # Exclude: test files, examples, .github, and ZSH style names (unknown-token, etc.)
+          if grep -rE "(password|secret|token)\s*=" --include="*.sh" --include="*.zsh" . | \
+             grep -v "test" | \
+             grep -v "example" | \
+             grep -v ".github" | \
+             grep -v "ZSH_HIGHLIGHT_STYLES" | \
+             grep -v "unknown-token"; then
+            echo "Potential secrets found"
+            exit 1
+          fi
+          echo "No secrets detected"
+
+      - name: Check File Permissions
+        run: |
+          find . -name "*.sh" -perm -002 -exec echo "ERROR: {} is world-writable" \; -exec exit 1 \; || echo "All scripts have safe permissions"
+
+  # Full test suite - only on push to master
+  full-test-suite:
+    name: Full Test Suite
+    runs-on: ubuntu-latest
+    needs: [syntax-check, unit-tests, integration-tests, performance-tests, compatibility-tests, security-check]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache BATS
+        uses: actions/cache@v3
+        with:
+          path: .bats
+          key: ${{ runner.os }}-bats-${{ env.BATS_VERSION }}
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y zsh git curl wget time bc shellcheck
+
+          # Install Node.js for complete tests
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          nvm install --lts
+
+      - name: Install BATS
+        run: |
+          git clone --depth 1 --branch v${{ env.BATS_VERSION }} https://github.com/bats-core/bats-core.git /tmp/bats
+          mkdir -p .bats
+          cp -r /tmp/bats/* .bats/
+          chmod +x .bats/bin/bats
+
+      - name: Setup PATH
+        run: echo "${{ github.workspace }}/.bats/bin" >> $GITHUB_PATH
+
+      - name: Run Complete Test Suite
+        run: make test
+        env:
+          TEST_MODE: 1
+          SKIP_UPDATES_CHECK: true
+
+      - name: Generate Test Report
+        if: always()
+        run: make test-report || echo "Report generation skipped"
+
+      - name: Upload Complete Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: complete-test-report-${{ github.sha }}
+          path: |
+            test-report.txt
+            **/*.log
+          retention-days: 90
+
+      - name: Comment PR with Results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let report = 'Test suite completed successfully!';
+
+            if (fs.existsSync('test-report.txt')) {
+              report = fs.readFileSync('test-report.txt', 'utf8');
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Test Results\n\n\`\`\`\n${report}\n\`\`\``
+            });

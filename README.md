@@ -181,6 +181,46 @@ vim_install_system          # Install system-wide (sudo)
 - **Clipboard integration** - Works with system clipboard
 - **Performance optimized** - Fast startup and responsive editing
 
+## ⌨️ Smart Navigation & History
+
+### Intelligent History Search
+
+**Prefix-based History Navigation:**
+- 🔍 **Smart filtering** - Type `cd` then use ↑/↓ to see only `cd` commands
+- ⚡ **Instant results** - Fast navigation through filtered history
+- 🎯 **Precise matching** - Only shows commands starting with your input
+- 🔄 **Cross-session** - Works across all terminal sessions
+
+**Keyboard Shortcuts:**
+```bash
+↑ / ↓                       # Navigate history with prefix filtering
+Ctrl+P / Ctrl+N             # Alternative prefix navigation
+Ctrl+R                      # Interactive search (full history)
+Ctrl+S                      # Forward interactive search
+```
+
+**Usage Examples:**
+```bash
+# Type 'git' then press ↑/↓ to cycle through:
+git status
+git add .
+git commit -m "message"
+git push origin main
+
+# Type 'npm' then press ↑/↓ to cycle through:
+npm install
+npm run dev
+npm run build
+npm test
+```
+
+### Enhanced Navigation Features
+
+- **Auto-completion** - Smart command and path completion
+- **Directory stack** - `pushd`/`popd` with visual indicators  
+- **Jump navigation** - Quick access to frequent directories
+- **History optimization** - Duplicate removal with order preservation
+
 ## 📦 Development Environment
 
 ### Node.js & NVM Integration

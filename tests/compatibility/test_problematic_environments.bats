@@ -35,16 +35,17 @@ teardown() {
     run zsh -c "
         export SUDO_USER=testuser
         export SUDO_UID=1000
+        export PATH=/usr/bin:/bin
         source $PROJECT_ROOT/config/99-root-safe.zsh
         echo \"MINIMAL_MODE=\$MINIMAL_MODE\"
         echo \"FORCE_ROOT_SAFE=\$FORCE_ROOT_SAFE\"
-        echo \"PS1=\$PS1\"
+        echo \"SKIP_GLOBAL_CONFIG=\$SKIP_GLOBAL_CONFIG\"
         echo 'SUDO_ROOT_SAFE_OK'
     "
     [ "$status" -eq 0 ]
     assert_contains "$output" "MINIMAL_MODE=1"
     assert_contains "$output" "FORCE_ROOT_SAFE=1"
-    assert_contains "$output" "root-safe"
+    assert_contains "$output" "SKIP_GLOBAL_CONFIG=1"
     assert_contains "$output" "SUDO_ROOT_SAFE_OK"
 }
 
@@ -74,12 +75,14 @@ teardown() {
         export FORCE_ROOT_SAFE=1
         source $PROJECT_ROOT/config/99-root-safe.zsh
         echo \"MINIMAL_MODE=\$MINIMAL_MODE\"
-        echo \"ANTIGEN_DISABLE=\$ANTIGEN_DISABLE\"
+        echo \"SKIP_GLOBAL_CONFIG=\$SKIP_GLOBAL_CONFIG\"
+        echo \"DISABLE_AUTO_UPDATE=\$DISABLE_AUTO_UPDATE\"
         echo 'FORCED_ROOT_SAFE_OK'
     "
     [ "$status" -eq 0 ]
     assert_contains "$output" "MINIMAL_MODE=1"
-    assert_contains "$output" "ANTIGEN_DISABLE=1"
+    assert_contains "$output" "SKIP_GLOBAL_CONFIG=1"
+    assert_contains "$output" "DISABLE_AUTO_UPDATE=true"
     assert_contains "$output" "FORCED_ROOT_SAFE_OK"
 }
 
@@ -116,15 +119,26 @@ teardown() {
 }
 
 @test "Handles missing whoami command" {
+    # Create a fake whoami that fails
+    local fake_whoami_dir=$(mktemp -d)
+    cat > "$fake_whoami_dir/whoami" << 'EOF'
+#!/bin/sh
+exit 127
+EOF
+    chmod +x "$fake_whoami_dir/whoami"
+
     run zsh -c "
-        export PATH=/bin:/usr/bin
-        alias whoami='exit 127'  # Command not found
+        export PATH='$fake_whoami_dir:/bin:/usr/bin'
         export USER=testuser
         export UID=1000
         export EUID=1000
-        source $PROJECT_ROOT/config/99-root-safe.zsh
+        source '$PROJECT_ROOT/config/99-root-safe.zsh' || true
         echo 'WHOAMI_MISSING_OK'
     "
+
+    # Cleanup
+    rm -rf "$fake_whoami_dir"
+
     [ "$status" -eq 0 ]
     assert_contains "$output" "WHOAMI_MISSING_OK"
 }

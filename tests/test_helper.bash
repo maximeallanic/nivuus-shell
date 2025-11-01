@@ -153,27 +153,30 @@ setup_nodejs_test_env() {
         export NODE_TEST_MODE="system"
         return 0
     fi
-    
+
     # Try to use existing NVM installation
     if [ -s "$HOME/.nvm/nvm.sh" ]; then
         export NVM_DIR="$HOME/.nvm"
-        source "$NVM_DIR/nvm.sh"
-        
-        # Use existing Node.js version or install LTS
+        source "$NVM_DIR/nvm.sh" || true
+
+        # Use existing Node.js version or install LTS (don't fail if this doesn't work)
         if ! command -v node >/dev/null 2>&1; then
-            nvm use --lts >/dev/null 2>&1 || nvm install --lts >/dev/null 2>&1
+            nvm use --lts >/dev/null 2>&1 || nvm install --lts >/dev/null 2>&1 || true
         fi
-        
+
         if command -v node >/dev/null 2>&1; then
             export NODE_TEST_MODE="nvm"
             return 0
         fi
     fi
-    
-    # Install minimal NVM for testing if not available
+
+    # Install minimal NVM for testing if not available (optional, don't fail)
     if [ ! -s "$TEST_HOME/.nvm/nvm.sh" ]; then
-        install_nvm_for_testing
+        install_nvm_for_testing || true
     fi
+
+    # Always return 0 - tests that need Node.js will skip themselves
+    return 0
 }
 
 # Install NVM specifically for testing
