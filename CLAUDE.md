@@ -76,12 +76,23 @@ TEST_MODE=1 MINIMAL_MODE=1 SKIP_UPDATES_CHECK=true  # Variables pour tests
 
 **Optimisations implémentées (oct 2025 - commit e32c073):**
 
-1. **Ultra-lazy NVM loading v2** (16-nvm-integration.zsh + .zshrc) - Sauvegarde ~1000ms
+1. **Ultra-lazy NVM loading v2 + Auto-load au premier prompt** (16-nvm-integration.zsh + .zshrc) - Sauvegarde ~1000ms
    - **CRITIQUE**: Supprimé chargement direct dans `.zshrc` (lignes 10-12)
-   - NVM n'est PAS chargé au startup (même pas `nvm.sh`)
-   - Wrappers pour `nvm`, `node`, `npm`, `npx` chargent à la demande
+   - NVM n'est PAS chargé au startup (même pas `nvm.sh`) → préserve <300ms
+   - **Auto-load au premier prompt**: Hook `precmd` one-shot charge Node.js avant première commande
+     - Fonction: `_nvm_first_prompt_load()` s'exécute une seule fois
+     - Se retire automatiquement après exécution
+     - Variable: `_NIVUUS_FIRST_PROMPT_LOADED`
+     - Impact: +200-300ms au premier prompt (invisible pendant lecture du prompt)
+   - **Auto-switch version**: Hook `chpwd` optimisé `nvm_auto_use_lazy()`
+     - Détecte `.nvmrc` dans répertoire courant ou parents (remonte jusqu'à `/`)
+     - Switch version automatiquement en entrant dans un projet Node.js
+     - **Revient à 'default' en quittant** un projet (pas de .nvmrc/package.json)
+     - `NVM_AUTO_USE=false` désactive le hook NVM natif (remplacé par notre version)
+     - Enregistré dans `chpwd_functions` après chargement NVM
+   - Wrappers pour `nvm`, `node`, `npm`, `npx` chargent à la demande (fallback)
    - Hook `chpwd` optimisé: `_NIVUUS_LAST_PWD="$(pwd)"` au init (skip premier call)
-   - Variables: `_NIVUUS_NVM_LOADED`, `_NIVUUS_NODE_LAZY_LOADED`
+   - Variables: `_NIVUUS_NVM_LOADED`, `_NIVUUS_NODE_LAZY_LOADED`, `_NIVUUS_FIRST_PROMPT_LOADED`
    - **NE JAMAIS** ajouter `source nvm.sh` dans `.zshrc` ou `07-functions.zsh`!
 
 2. **Compinit optimisé** (03-completion.zsh) - Sauvegarde 160ms
@@ -109,9 +120,10 @@ TEST_MODE=1 MINIMAL_MODE=1 SKIP_UPDATES_CHECK=true  # Variables pour tests
    - Activer: `export ENABLE_PROJECT_DETECTION=true`
 
 **Performance attendue:**
-- Sans projets Node.js: **~350ms** (avec syntax highlighting)
-- Sans projets Node.js + `ENABLE_SYNTAX_HIGHLIGHTING=false`: **~320ms**
-- Avec NVM activé (première utilisation): +200-300ms (une seule fois)
+- Startup shell: **~350ms** (avec syntax highlighting), **~320ms** (sans)
+- Premier affichage prompt: +200-300ms (chargement Node.js automatique, invisible)
+- Node.js disponible: **Avant première commande** (via hook precmd)
+- Changement répertoire projet: Auto-switch version (hook chpwd)
 
 **Variables d'optimisation:**
 ```bash
@@ -119,6 +131,13 @@ export ENABLE_SYNTAX_HIGHLIGHTING=false  # Gagne ~27ms
 export ENABLE_PROJECT_DETECTION=false    # Défaut, gagne ~10-20ms si true
 export ENABLE_PATH_DIAGNOSTICS=false     # Défaut, gagne ~140ms si true
 ```
+
+8. **Optimisations `cd` performance** (oct 2025) - Sauvegarde ~70-90%
+   - **Git status cached** (2s TTL) : évite appels répét\u00e9s à `git status --porcelain`
+   - **Cache intelligent `.nvmrc`** : mémorise chemin trouvé, évite recherche récursive
+   - **Firebase optionnel** : variable `ENABLE_FIREBASE_PROMPT=false` pour désactiver
+   - Configuration centralisée dans `00-performance-config.zsh`
+   - Impact : cd passe de 300-1000ms à <100ms (avec cache)
 
 **TOUJOURS** `make test-performance` après modifications
 
