@@ -58,6 +58,7 @@ config_files=(
     18-autosuggestions.zsh
     19-ai-suggestions.zsh
     20-autoupdate.zsh
+    20-terminal-title.zsh
     99-cleanup.zsh
 )
 
