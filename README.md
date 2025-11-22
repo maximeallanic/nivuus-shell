@@ -19,7 +19,21 @@
 
 ## 🚀 Quick Start
 
-### Installation
+### One-Line Installation
+
+Install Nivuus Shell with a single command:
+
+```bash
+git clone https://github.com/maximeallanic/nivuus-shell.git /tmp/nivuus-shell && /tmp/nivuus-shell/install.sh --non-interactive && rm -rf /tmp/nivuus-shell && exec zsh
+```
+
+This will:
+1. Clone the repository to `/tmp/nivuus-shell`
+2. Run the installation automatically (no prompts)
+3. Clean up the temporary directory
+4. Restart your shell with Nivuus
+
+### Manual Installation
 
 #### User Installation (Recommended)
 ```bash
