@@ -61,7 +61,22 @@ The shell loads in a specific order via `.zshrc`:
 
 ### Performance Architecture
 
-**Lazy Loading Pattern** (see `config/09-nodejs.zsh`):
+**Lazy Loading Pattern - Completion System** (see `config/03-completion.zsh`):
+```zsh
+# compinit is NOT loaded on startup - loads on first TAB press
+# This saves ~300ms at startup (the biggest performance win)
+_nivuus_lazy_compinit() {
+    unfunction _nivuus_lazy_compinit
+    autoload -Uz compinit
+    compinit -C -d "$ZCOMPDUMP"
+    _nivuus_setup_completion_styles
+    zle expand-or-complete
+}
+zle -N _nivuus_lazy_compinit
+bindkey '^I' _nivuus_lazy_compinit
+```
+
+**Lazy Loading Pattern - External Tools** (see `config/09-nodejs.zsh`):
 ```zsh
 # NVM is not loaded on startup - function wrapper loads it on first use
 nvm() {
@@ -252,6 +267,7 @@ Modify `config/05-prompt.zsh`:
 
 - **`.zshrc`**: Entry point, loads modules in order, measures startup time
 - **`themes/nord.zsh`**: Nord color palette, must load before all other modules
+- **`config/03-completion.zsh`**: Lazy-loaded completion system (loads on first TAB) - saves ~300ms startup
 - **`config/05-prompt.zsh`**: Prompt builder, git caching, Firebase detection, Python venv, cloud context
 - **`config/08-vim.zsh`**: Vim wrapper functions, environment detection
 - **`config/09-nodejs.zsh`**: NVM lazy loading, auto-switch with .nvmrc, project detection
