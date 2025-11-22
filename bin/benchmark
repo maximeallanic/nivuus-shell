@@ -1,0 +1,265 @@
+#!/usr/bin/env bash
+# =============================================================================
+# Nivuus Shell Benchmark
+# =============================================================================
+# Performance testing and analysis
+# =============================================================================
+
+set -e
+
+# Colors
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+echo -e "${BLUE}═══════════════════════════════════════════${NC}"
+echo -e "${BLUE}  Nivuus Shell - Performance Benchmark${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════${NC}"
+echo ""
+
+# =============================================================================
+# Full Shell Load Time
+# =============================================================================
+
+echo -e "${BLUE}Full Shell Load Time${NC}"
+echo "─────────────────────────────────────────────"
+
+runs=5
+total=0
+
+for ((i=1; i<=runs; i++)); do
+    temp_file=$(mktemp)
+    cat > "$temp_file" << 'EOF'
+#!/usr/bin/env zsh
+start=$EPOCHREALTIME
+source "$HOME/.zshrc"
+end=$EPOCHREALTIME
+duration=$(( ($end - $start) * 1000 ))
+echo "$duration"
+EOF
+
+    load_time=$(zsh "$temp_file" 2>/dev/null)
+    rm -f "$temp_file"
+
+    total=$(echo "$total + $load_time" | bc)
+    echo "  Run $i: ${load_time}ms"
+done
+
+average=$(echo "scale=2; $total / $runs" | bc)
+echo ""
+echo "Average: ${average}ms"
+
+avg_int=${average%.*}
+if (( avg_int < 300 )); then
+    echo -e "${GREEN}✓ Excellent (<300ms)${NC}"
+elif (( avg_int < 500 )); then
+    echo -e "${YELLOW}✓ Good (<500ms)${NC}"
+else
+    echo -e "${RED}⚠ Slow (>500ms)${NC}"
+fi
+echo ""
+
+# =============================================================================
+# Module Load Times
+# =============================================================================
+
+echo -e "${BLUE}Individual Module Load Times${NC}"
+echo "─────────────────────────────────────────────"
+
+NIVUUS_DIR="${NIVUUS_SHELL_DIR:-$HOME/.nivuus-shell}"
+
+if [[ -d "$NIVUUS_DIR/config" ]]; then
+    for config_file in "$NIVUUS_DIR"/config/*.zsh; do
+        module_name=$(basename "$config_file")
+
+        temp_file=$(mktemp)
+        cat > "$temp_file" << EOF
+#!/usr/bin/env zsh
+export NIVUUS_SHELL_DIR="$NIVUUS_DIR"
+start=\$EPOCHREALTIME
+source "$config_file"
+end=\$EPOCHREALTIME
+duration=\$(( (\$end - \$start) * 1000 ))
+echo "\$duration"
+EOF
+
+        module_time=$(zsh "$temp_file" 2>/dev/null || echo "0")
+        rm -f "$temp_file"
+
+        printf "  %-30s %6.2fms\n" "$module_name" "$module_time"
+    done
+else
+    echo "  Config directory not found: $NIVUUS_DIR/config"
+fi
+echo ""
+
+# =============================================================================
+# Command Execution Speed
+# =============================================================================
+
+echo -e "${BLUE}Command Execution Speed${NC}"
+echo "─────────────────────────────────────────────"
+
+# Test simple command
+test_command() {
+    local cmd="$1"
+    local runs=10
+
+    local total=0
+    for ((i=1; i<=runs; i++)); do
+        start=$EPOCHREALTIME
+        eval "$cmd" &>/dev/null
+        end=$EPOCHREALTIME
+        duration=$(( ($end - $start) * 1000 ))
+        total=$(echo "$total + $duration" | bc)
+    done
+
+    average=$(echo "scale=2; $total / $runs" | bc)
+    printf "  %-30s %6.2fms\n" "$cmd" "$average"
+}
+
+source "$HOME/.zshrc" &>/dev/null
+
+test_command "ls"
+test_command "git status" 2>/dev/null || echo "  git status - not in repo"
+test_command "echo test"
+test_command "pwd"
+echo ""
+
+# =============================================================================
+# Prompt Generation Speed
+# =============================================================================
+
+echo -e "${BLUE}Prompt Generation Speed${NC}"
+echo "─────────────────────────────────────────────"
+
+temp_file=$(mktemp)
+cat > "$temp_file" << 'EOF'
+#!/usr/bin/env zsh
+source "$HOME/.zshrc" &>/dev/null
+
+runs=20
+total=0
+
+for ((i=1; i<=runs; i++)); do
+    start=$EPOCHREALTIME
+    prompt_test=$PROMPT
+    end=$EPOCHREALTIME
+    duration=$(( ($end - $start) * 1000 ))
+    total=$(echo "$total + $duration" | bc)
+done
+
+average=$(echo "scale=2; $total / $runs" | bc)
+echo "$average"
+EOF
+
+prompt_time=$(zsh "$temp_file" 2>/dev/null)
+rm -f "$temp_file"
+
+echo "  Average prompt generation: ${prompt_time}ms"
+
+prompt_int=${prompt_time%.*}
+if (( prompt_int < 50 )); then
+    echo -e "  ${GREEN}✓ Excellent (<50ms)${NC}"
+elif (( prompt_int < 100 )); then
+    echo -e "  ${YELLOW}✓ Good (<100ms)${NC}"
+else
+    echo -e "  ${RED}⚠ Slow (>100ms) - check git cache settings${NC}"
+fi
+echo ""
+
+# =============================================================================
+# Memory Usage
+# =============================================================================
+
+echo -e "${BLUE}Memory Usage${NC}"
+echo "─────────────────────────────────────────────"
+
+# Find ZSH processes
+zsh_mem=$(ps aux | grep "[z]sh" | awk '{sum+=$6} END {printf "%.2f", sum/1024}')
+
+if [[ -n "$zsh_mem" ]]; then
+    echo "  ZSH processes: ${zsh_mem} MB"
+
+    mem_int=${zsh_mem%.*}
+    if (( mem_int < 10 )); then
+        echo -e "  ${GREEN}✓ Excellent (<10MB)${NC}"
+    elif (( mem_int < 50 )); then
+        echo -e "  ${YELLOW}✓ Good (<50MB)${NC}"
+    else
+        echo -e "  ${RED}⚠ High memory usage${NC}"
+    fi
+else
+    echo "  Could not measure memory usage"
+fi
+echo ""
+
+# =============================================================================
+# Compilation Status
+# =============================================================================
+
+echo -e "${BLUE}Compilation Status${NC}"
+echo "─────────────────────────────────────────────"
+
+compiled=0
+total_files=0
+
+# Check .zshrc
+if [[ -f "$HOME/.zshrc" ]]; then
+    total_files=$((total_files + 1))
+    [[ -f "$HOME/.zshrc.zwc" ]] && compiled=$((compiled + 1))
+fi
+
+# Check config files
+if [[ -d "$NIVUUS_DIR/config" ]]; then
+    for config_file in "$NIVUUS_DIR"/config/*.zsh; do
+        total_files=$((total_files + 1))
+        [[ -f "${config_file}.zwc" ]] && compiled=$((compiled + 1))
+    done
+fi
+
+echo "  Compiled files: $compiled/$total_files"
+
+if (( compiled == total_files )); then
+    echo -e "  ${GREEN}✓ All files compiled${NC}"
+elif (( compiled > 0 )); then
+    echo -e "  ${YELLOW}⚠ Some files not compiled${NC}"
+    echo "  Run: source ~/.zshrc to compile"
+else
+    echo -e "  ${RED}✗ No files compiled${NC}"
+    echo "  Run: source ~/.zshrc to compile"
+fi
+echo ""
+
+# =============================================================================
+# Summary
+# =============================================================================
+
+echo -e "${BLUE}═══════════════════════════════════════════${NC}"
+echo -e "${GREEN}Benchmark complete!${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════${NC}"
+echo ""
+
+# Recommendations
+echo -e "${BLUE}Recommendations:${NC}"
+
+if (( avg_int > 300 )); then
+    echo "  • Shell load time is slow. Try:"
+    echo "    - export ENABLE_SYNTAX_HIGHLIGHTING=false"
+    echo "    - export ENABLE_PROJECT_DETECTION=false"
+    echo "    - export ENABLE_FIREBASE_PROMPT=false"
+fi
+
+if (( compiled < total_files )); then
+    echo "  • Compile ZSH files for faster loading:"
+    echo "    source ~/.zshrc"
+fi
+
+if (( prompt_int > 50 )); then
+    echo "  • Prompt generation is slow. Try:"
+    echo "    export GIT_PROMPT_CACHE_TTL=5"
+fi
+
+echo ""

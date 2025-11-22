@@ -1,0 +1,30 @@
+# ZSH compiled files
+*.zwc
+
+# Backup files
+*.backup.*
+*~
+
+# Cache
+.cache/
+.zcompdump*
+
+# Local configuration (contains secrets)
+.zsh_local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Testing
+test/
+.test/

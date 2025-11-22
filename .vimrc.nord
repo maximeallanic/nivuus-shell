@@ -1,0 +1,205 @@
+" =============================================================================
+" Nivuus Vim Configuration - Nord Theme + Modern Shortcuts
+" =============================================================================
+" Optimized for speed and usability
+" =============================================================================
+
+" -----------------------------------------------------------------------------
+" Basic Settings
+" -----------------------------------------------------------------------------
+
+set nocompatible              " Disable vi compatibility
+filetype plugin indent on     " Enable filetype detection
+syntax on                     " Enable syntax highlighting
+
+" -----------------------------------------------------------------------------
+" Nord Color Scheme
+" -----------------------------------------------------------------------------
+
+set background=dark
+set termguicolors
+
+" Nord palette
+let g:nord0_gui = "#2E3440"
+let g:nord1_gui = "#3B4252"
+let g:nord2_gui = "#434C5E"
+let g:nord3_gui = "#4C566A"
+let g:nord4_gui = "#D8DEE9"
+let g:nord5_gui = "#E5E9F0"
+let g:nord6_gui = "#ECEFF4"
+let g:nord7_gui = "#8FBCBB"
+let g:nord8_gui = "#88C0D0"
+let g:nord9_gui = "#81A1C1"
+let g:nord10_gui = "#5E81AC"
+let g:nord11_gui = "#BF616A"
+let g:nord12_gui = "#D08770"
+let g:nord13_gui = "#EBCB8B"
+let g:nord14_gui = "#A3BE8C"
+let g:nord15_gui = "#B48EAD"
+
+" Apply Nord colors
+highlight Normal guifg=#D8DEE9 guibg=#2E3440
+highlight Comment guifg=#4C566A
+highlight LineNr guifg=#4C566A guibg=#2E3440
+highlight CursorLine guibg=#3B4252
+highlight Visual guibg=#434C5E
+highlight Search guibg=#EBCB8B guifg=#2E3440
+highlight StatusLine guifg=#D8DEE9 guibg=#3B4252
+highlight VertSplit guifg=#4C566A guibg=#2E3440
+
+" -----------------------------------------------------------------------------
+" Editor Settings
+" -----------------------------------------------------------------------------
+
+set number                    " Show line numbers
+set ruler                     " Show cursor position
+set showcmd                   " Show command in bottom bar
+set cursorline                " Highlight current line
+set wildmenu                  " Visual autocomplete for command menu
+set showmatch                 " Highlight matching parenthesis
+set laststatus=2              " Always show status line
+
+" Indentation
+set tabstop=4                 " Tab width
+set shiftwidth=4              " Indent width
+set expandtab                 " Use spaces instead of tabs
+set smartindent               " Smart indentation
+set autoindent                " Auto indentation
+
+" Search
+set incsearch                 " Incremental search
+set hlsearch                  " Highlight search results
+set ignorecase                " Case insensitive search
+set smartcase                 " Case sensitive if uppercase present
+
+" Performance
+set lazyredraw                " Redraw only when needed
+set ttyfast                   " Fast terminal connection
+
+" Backups
+set nobackup                  " No backup files
+set nowritebackup             " No backup before overwriting
+set noswapfile                " No swap files
+
+" Encoding
+set encoding=utf-8
+set fileencoding=utf-8
+
+" -----------------------------------------------------------------------------
+" Modern Keyboard Shortcuts (Ctrl+C/V/X/A)
+" -----------------------------------------------------------------------------
+
+" Enable clipboard support
+set clipboard=unnamedplus
+
+" Detect clipboard support
+if has('clipboard')
+    " Normal mode: Ctrl+C to copy line
+    nnoremap <C-c> "+yy
+
+    " Visual mode: Ctrl+C to copy selection
+    vnoremap <C-c> "+y
+
+    " Normal mode: Ctrl+X to cut line
+    nnoremap <C-x> "+dd
+
+    " Visual mode: Ctrl+X to cut selection
+    vnoremap <C-x> "+d
+
+    " Normal/Insert mode: Ctrl+V to paste
+    nnoremap <C-v> "+p
+    inoremap <C-v> <Esc>"+pa
+
+    " Normal mode: Ctrl+A to select all
+    nnoremap <C-a> ggVG
+
+    " Visual mode: Ctrl+A to select all
+    vnoremap <C-a> <Esc>ggVG
+endif
+
+" Fallback if no system clipboard
+if !has('clipboard')
+    " Use internal register
+    nnoremap <C-c> yy
+    vnoremap <C-c> y
+    nnoremap <C-x> dd
+    vnoremap <C-x> d
+    nnoremap <C-v> p
+    inoremap <C-v> <Esc>pa
+    nnoremap <C-a> ggVG
+    vnoremap <C-a> <Esc>ggVG
+endif
+
+" -----------------------------------------------------------------------------
+" Additional Shortcuts
+" -----------------------------------------------------------------------------
+
+" Ctrl+S to save
+nnoremap <C-s> :w<CR>
+inoremap <C-s> <Esc>:w<CR>a
+
+" Ctrl+Q to quit
+nnoremap <C-q> :q<CR>
+
+" Ctrl+Z to undo
+nnoremap <C-z> u
+inoremap <C-z> <Esc>ua
+
+" Ctrl+Y to redo
+nnoremap <C-y> <C-r>
+inoremap <C-y> <Esc><C-r>a
+
+" -----------------------------------------------------------------------------
+" Navigation
+" -----------------------------------------------------------------------------
+
+" Move by visual line
+nnoremap j gj
+nnoremap k gk
+
+" Quick navigation between splits
+nnoremap <C-h> <C-w>h
+nnoremap <C-j> <C-w>j
+nnoremap <C-k> <C-w>k
+nnoremap <C-l> <C-w>l
+
+" -----------------------------------------------------------------------------
+" File Type Specific
+" -----------------------------------------------------------------------------
+
+" Markdown
+autocmd FileType markdown setlocal wrap linebreak
+
+" YAML
+autocmd FileType yaml setlocal tabstop=2 shiftwidth=2
+
+" JSON
+autocmd FileType json setlocal tabstop=2 shiftwidth=2
+
+" -----------------------------------------------------------------------------
+" Status Line
+" -----------------------------------------------------------------------------
+
+set statusline=
+set statusline+=%#StatusLine#
+set statusline+=\ %f                    " File path
+set statusline+=\ %m                    " Modified flag
+set statusline+=\ %r                    " Read-only flag
+set statusline+=%=                      " Right align
+set statusline+=\ %y                    " File type
+set statusline+=\ %{&fileencoding}      " Encoding
+set statusline+=\ %p%%                  " Percentage through file
+set statusline+=\ %l:%c                 " Line:Column
+set statusline+=\
+
+" -----------------------------------------------------------------------------
+" Performance Optimizations for SSH
+" -----------------------------------------------------------------------------
+
+" Disable slow features in SSH
+if $SSH_CONNECTION != ''
+    set noshowcmd                " Don't show command
+    set noruler                  " Don't show ruler
+    set laststatus=1             " Only show statusline if multiple windows
+    set foldmethod=manual        " Manual folding only
+endif
