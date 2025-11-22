@@ -293,6 +293,26 @@ cp -r ~/.config/nivuus-shell-backup/pre-update-YYYYMMDD-HHMMSS/nivuus-shell ~/.n
 exec zsh
 ```
 
+## 🔧 Development
+
+Test changes without installing:
+
+```bash
+git clone https://github.com/maximeallanic/nivuus-shell.git
+cd nivuus-shell
+./dev.sh
+```
+
+This launches a dev shell with:
+- No file copying (uses repo directly)
+- No compilation (instant reload)
+- All changes take effect immediately
+
+Edit any file, then restart the shell to see changes:
+```bash
+exec zsh
+```
+
 ## 📁 Project Structure
 
 ```

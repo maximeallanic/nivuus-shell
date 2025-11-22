@@ -16,23 +16,26 @@ rehash
 # Compile ZSH Files for Faster Loading
 # =============================================================================
 
-# Compile .zshrc if not already compiled or if source is newer
-if [[ -f "$HOME/.zshrc" ]] && [[ (! -f "$HOME/.zshrc.zwc" || "$HOME/.zshrc" -nt "$HOME/.zshrc.zwc") ]]; then
-    zcompile "$HOME/.zshrc" &>/dev/null
-fi
+# Skip compilation in dev mode for faster iteration
+if [[ "${NIVUUS_NO_COMPILE:-0}" != "1" ]]; then
+    # Compile .zshrc if not already compiled or if source is newer
+    if [[ -f "$HOME/.zshrc" ]] && [[ (! -f "$HOME/.zshrc.zwc" || "$HOME/.zshrc" -nt "$HOME/.zshrc.zwc") ]]; then
+        zcompile "$HOME/.zshrc" &>/dev/null
+    fi
 
-# Compile config files for faster loading
-if [[ -d "$NIVUUS_SHELL_DIR/config" ]]; then
-    for config_file in "$NIVUUS_SHELL_DIR"/config/*.zsh; do
-        if [[ (! -f "${config_file}.zwc" || "$config_file" -nt "${config_file}.zwc") ]]; then
-            zcompile "$config_file" &>/dev/null &
-        fi
-    done
-fi
+    # Compile config files for faster loading
+    if [[ -d "$NIVUUS_SHELL_DIR/config" ]]; then
+        for config_file in "$NIVUUS_SHELL_DIR"/config/*.zsh; do
+            if [[ (! -f "${config_file}.zwc" || "$config_file" -nt "${config_file}.zwc") ]]; then
+                zcompile "$config_file" &>/dev/null &
+            fi
+        done
+    fi
 
-# Compile .zsh_local if exists
-if [[ -f "$HOME/.zsh_local" ]] && [[ (! -f "$HOME/.zsh_local.zwc" || "$HOME/.zsh_local" -nt "$HOME/.zsh_local.zwc") ]]; then
-    zcompile "$HOME/.zsh_local" &>/dev/null
+    # Compile .zsh_local if exists
+    if [[ -f "$HOME/.zsh_local" ]] && [[ (! -f "$HOME/.zsh_local.zwc" || "$HOME/.zsh_local" -nt "$HOME/.zsh_local.zwc") ]]; then
+        zcompile "$HOME/.zsh_local" &>/dev/null
+    fi
 fi
 
 # =============================================================================
