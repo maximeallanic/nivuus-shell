@@ -13,12 +13,25 @@ export NIVUUS_AI_SUGGESTIONS_LOADED=1
 [[ "${ENABLE_AI_SUGGESTIONS:-false}" != "true" ]] && return
 
 # =============================================================================
+# Cleanup Old Temp Files
+# =============================================================================
+
+# Clean up orphaned temp files from crashed/killed shells
+# Only remove files older than 1 hour that don't belong to current PID
+{
+    find /tmp -maxdepth 1 -name 'nivuus-ai-*' -mmin +60 -type f 2>/dev/null | \
+    grep -v "$$" | \
+    xargs rm -f 2>/dev/null
+} &>/dev/null &!
+
+# =============================================================================
 # Configuration
 # =============================================================================
 
 typeset -gi AI_SUGGESTION_DEBOUNCE_TIME=2     # seconds
 typeset -gi AI_SUGGESTION_CACHE_TTL=300       # 5 minutes
 typeset -gi AI_SUGGESTION_MIN_CHARS=3         # Min buffer length
+typeset -gi AI_SUGGESTION_SPINNER_TIMEOUT=5   # Max spinner duration (seconds)
 typeset -g AI_SUGGESTION_COLOR='240'          # Nord3 dim gray
 typeset -g AI_SUGGESTION_INDENT='> '          # Indent prefix (configure to match your prompt)
 
@@ -44,6 +57,8 @@ typeset -g _AI_LAST_BUFFER=""
 typeset -g _AI_SUGGESTION_PIPE="/tmp/nivuus-ai-suggestion-$$"
 typeset -gi _AI_UPDATES_PENDING=0
 typeset -gi _AI_ALARM_ACTIVE=0
+typeset -g _AI_NAVIGATION_MODE=false
+typeset -g _AI_SPINNER_START_TIME=""
 
 # Spinner animation frames (Braille dots)
 typeset -ga _AI_SPINNER_FRAMES
@@ -190,6 +205,9 @@ _ai_start_spinner() {
     local spinner_file="/tmp/nivuus-ai-spinner-$$"
     local parent_pid=$$
 
+    # Record start time for timeout detection
+    _AI_SPINNER_START_TIME=$EPOCHSECONDS
+
     {
         local frame_index=0
         local num_frames=${#_AI_SPINNER_FRAMES[@]}
@@ -220,26 +238,31 @@ _ai_stop_spinner() {
         # Clean up spinner file
         rm -f "/tmp/nivuus-ai-spinner-$$"
     fi
+
+    # Clear start time
+    _AI_SPINNER_START_TIME=""
 }
 
 _ai_clear_display() {
-    [[ "$_AI_DISPLAY_VISIBLE" != "true" ]] && return
+    # Clear even if not visible (aggressive cleanup)
+    if [[ "$_AI_DISPLAY_VISIBLE" == "true" ]] || [[ -n "$POSTDISPLAY" ]]; then
+        # Debug
+        [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Clearing display" >&2
 
-    # Debug
-    [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Clearing display" >&2
+        # Stop spinner if running
+        _ai_stop_spinner
 
-    # Stop spinner if running
-    _ai_stop_spinner
+        # Clear POSTDISPLAY
+        POSTDISPLAY=""
 
-    # Clear POSTDISPLAY
-    POSTDISPLAY=""
+        # Refresh display
+        zle -R 2>/dev/null
 
-    # Refresh display
-    zle -R 2>/dev/null
-
-    # Update state
-    _AI_CURRENT_SUGGESTION=""
-    _AI_DISPLAY_VISIBLE=false
+        # Update state
+        _AI_CURRENT_SUGGESTION=""
+        _AI_DISPLAY_VISIBLE=false
+        _AI_PENDING_POSTDISPLAY=""
+    fi
 }
 
 # =============================================================================
@@ -295,12 +318,17 @@ Command:"
     local parent_pid=$$
     {
         [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Starting background fetch..." >&2
-        # Filter out warnings/errors and get first actual suggestion
-        local suggestion=$(gemini --model "$model" "$prompt" 2>&1 | \
+        # Filter out warnings/errors/status messages and get first actual suggestion
+        local suggestion=$(gemini --model "$model" -o text "$prompt" 2>&1 | \
             grep -v '^\[WARN\]' | \
             grep -v '^\[ERROR\]' | \
             grep -v '^Error:' | \
             grep -v '^Warning:' | \
+            grep -v '^Loaded cached credentials\.' | \
+            grep -v '^Loading' | \
+            grep -v '^Connecting' | \
+            grep -v '^Using model' | \
+            grep -E '^[a-zA-Z0-9_/\.\-]' | \
             head -1 | \
             sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
         [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Got suggestion: '$suggestion'" >&2
@@ -309,7 +337,9 @@ Command:"
         if [[ -n "$suggestion" ]]; then
             _ai_set_cached_suggestion "$cache_key" "$suggestion"
             # Write to temp file for hook to pick up
+            [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Writing suggestion to: $suggestion_pipe" >&2
             echo "$suggestion" > "$suggestion_pipe"
+            [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Sending USR1 to PID: $parent_pid" >&2
             # Trigger display by sending signal
             kill -USR1 $parent_pid 2>/dev/null
         fi
@@ -378,9 +408,12 @@ _ai_accept_suggestion() {
 
 # Widget to update POSTDISPLAY (called from TRAPUSR1)
 _ai_update_display_widget() {
+    [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] ai-update-display called, POSTDISPLAY='$POSTDISPLAY', PENDING='$_AI_PENDING_POSTDISPLAY'" >&2
+
     # Check for conflict with other plugins
     if [[ -n "$POSTDISPLAY" ]] && [[ ! "$POSTDISPLAY" =~ ^$'\n' ]]; then
         # Another plugin owns POSTDISPLAY, don't interfere
+        [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] POSTDISPLAY conflict detected, skipping" >&2
         return
     fi
 
@@ -388,16 +421,72 @@ _ai_update_display_widget() {
     if [[ -n "$_AI_PENDING_POSTDISPLAY" ]]; then
         POSTDISPLAY="$_AI_PENDING_POSTDISPLAY"
         _AI_PENDING_POSTDISPLAY=""
+        [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] POSTDISPLAY updated" >&2
+        zle -R 2>/dev/null
     fi
 }
 
 # Hook function called before each line redraw
 _ai_on_line_pre_redraw() {
+    # Update POSTDISPLAY if there's pending content from TRAPUSR1
+    if [[ -n "$_AI_PENDING_POSTDISPLAY" ]]; then
+        [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Applying pending POSTDISPLAY from hook" >&2
+        POSTDISPLAY="$_AI_PENDING_POSTDISPLAY"
+        _AI_PENDING_POSTDISPLAY=""
+        _AI_DISPLAY_VISIBLE=true
+    fi
+
     # Don't trigger on empty buffer (happens on Ctrl+C, Enter, etc.)
     [[ -z "$BUFFER" ]] && return
 
+    # Reset navigation mode if buffer is being edited (user typing)
+    # This allows AI suggestions to resume after navigating history
+    if [[ "$_AI_NAVIGATION_MODE" == "true" ]]; then
+        # Check if buffer changed from last recorded state (user started typing)
+        if [[ -n "$_AI_LAST_BUFFER" ]] && [[ "$BUFFER" != "$_AI_LAST_BUFFER" ]]; then
+            [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Buffer edited, exiting navigation mode" >&2
+            _AI_NAVIGATION_MODE=false
+        else
+            # Still in navigation, skip AI suggestions
+            return
+        fi
+    fi
+
+    # Clear display if buffer changed significantly (not just appended)
+    if [[ -n "$_AI_CURRENT_SUGGESTION" ]] && [[ -n "$_AI_LAST_BUFFER" ]]; then
+        # Check if current buffer is NOT a prefix of last buffer (user edited/deleted)
+        if [[ "$BUFFER" != "$_AI_LAST_BUFFER"* ]]; then
+            [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Buffer changed, clearing display" >&2
+            _ai_clear_display
+        fi
+    fi
+
     # Schedule suggestion request (debounced)
     _ai_schedule_suggestion
+}
+
+# Navigation wrappers to clear AI during history navigation
+_ai_up_line_wrapper() {
+    # Clear AI suggestions before navigating
+    _ai_clear_display
+    _AI_NAVIGATION_MODE=true
+
+    # Call original widget
+    zle up-line-or-beginning-search
+}
+
+_ai_down_line_wrapper() {
+    # Clear AI suggestions before navigating
+    _ai_clear_display
+    _AI_NAVIGATION_MODE=true
+
+    # Call original widget
+    zle down-line-or-beginning-search
+}
+
+# Widget to reset navigation mode (called on buffer edit)
+_ai_reset_navigation() {
+    _AI_NAVIGATION_MODE=false
 }
 
 # =============================================================================
@@ -410,9 +499,18 @@ zle -N ai-accept-suggestion _ai_accept_suggestion
 # Register widget for updating display from TRAPUSR1
 zle -N ai-update-display _ai_update_display_widget
 
-# Bind Down arrow for accepting suggestions
-bindkey '^[[B' ai-accept-suggestion  # Standard down arrow
-bindkey '^[OB' ai-accept-suggestion  # Alternative (application mode)
+# Register navigation wrappers
+zle -N ai-up-line _ai_up_line_wrapper
+zle -N ai-down-line _ai_down_line_wrapper
+
+# Keybindings: Up/Down for history navigation, Tab for accepting AI
+bindkey '^[[A' ai-up-line      # Up arrow
+bindkey '^[[B' ai-down-line    # Down arrow
+bindkey '^P' ai-up-line        # Ctrl+P
+bindkey '^N' ai-down-line      # Ctrl+N
+
+# Tab to accept AI suggestions (classic autocomplete key)
+bindkey '^I' ai-accept-suggestion  # Tab
 
 # Register the line-pre-redraw hook to detect buffer changes
 autoload -U add-zle-hook-widget
@@ -420,12 +518,39 @@ add-zle-hook-widget line-pre-redraw _ai_on_line_pre_redraw
 
 # Trap USR1 to update POSTDISPLAY
 TRAPUSR1() {
+    [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] TRAPUSR1 called" >&2
+
     # Skip if ZLE not active
-    [[ -o ZLE ]] || return
+    if [[ ! -o ZLE ]]; then
+        [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] ZLE not active, skipping" >&2
+        return
+    fi
+
+    # Check for suggestion FIRST (higher priority than spinner)
+    if [[ -f "$_AI_SUGGESTION_PIPE" ]]; then
+        [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Found suggestion file" >&2
+        local suggestion=$(<"$_AI_SUGGESTION_PIPE")
+        rm -f "$_AI_SUGGESTION_PIPE"
+
+        if [[ -n "$suggestion" ]]; then
+            [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Got suggestion, storing for display: '$suggestion'" >&2
+            _ai_stop_spinner
+
+            # Store suggestion and set flag for hook to display it
+            _AI_CURRENT_SUGGESTION="$suggestion"
+            _AI_PENDING_POSTDISPLAY=$'\n'"${AI_SUGGESTION_INDENT}%F{${AI_SUGGESTION_COLOR}}▸ ${suggestion}%f"
+            _AI_DISPLAY_VISIBLE=false  # Will be set to true by hook
+
+            # Trigger a redraw so the hook runs
+            zle -R 2>/dev/null
+        fi
+        return
+    fi
 
     # Check for spinner marker to start spinner
     local start_spinner_file="/tmp/nivuus-ai-start-spinner-$$"
     if [[ -f "$start_spinner_file" ]]; then
+        [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Starting spinner" >&2
         rm -f "$start_spinner_file"
         _ai_start_spinner
         return
@@ -434,34 +559,26 @@ TRAPUSR1() {
     # Check for spinner update
     local spinner_file="/tmp/nivuus-ai-spinner-$$"
     if [[ -f "$spinner_file" ]]; then
-        local spinner_char=$(<"$spinner_file")
-        local indent="${AI_SUGGESTION_INDENT}"
-
-        # Prepare POSTDISPLAY content and call widget to update
-        _AI_PENDING_POSTDISPLAY=$'\n'"${indent}%F{${AI_SUGGESTION_COLOR}}${spinner_char}%f"
-        zle ai-update-display 2>/dev/null
-        return
-    fi
-
-    # Check for suggestion
-    if [[ -f "$_AI_SUGGESTION_PIPE" ]]; then
-        local suggestion=$(<"$_AI_SUGGESTION_PIPE")
-        rm -f "$_AI_SUGGESTION_PIPE"
-
-        if [[ -n "$suggestion" ]]; then
-            _ai_stop_spinner
-
-            # Prepare POSTDISPLAY content and call widget to update
-            local indent="${AI_SUGGESTION_INDENT}"
-            _AI_PENDING_POSTDISPLAY=$'\n'"${indent}%F{${AI_SUGGESTION_COLOR}}▸ ${suggestion}%f"
-
-            # Store for later acceptance
-            _AI_CURRENT_SUGGESTION="$suggestion"
-            _AI_DISPLAY_VISIBLE=true
-
-            # Call widget to update display
-            zle ai-update-display 2>/dev/null
+        [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Updating spinner" >&2
+        # Check spinner timeout
+        if [[ -n "$_AI_SPINNER_START_TIME" ]]; then
+            local elapsed=$(( EPOCHSECONDS - _AI_SPINNER_START_TIME ))
+            if (( elapsed > AI_SUGGESTION_SPINNER_TIMEOUT )); then
+                [[ "${AI_DEBUG:-false}" == "true" ]] && echo "[DEBUG] Spinner timeout after ${elapsed}s" >&2
+                _ai_stop_spinner
+                _ai_clear_display
+                return
+            fi
         fi
+
+        local spinner_char=$(<"$spinner_file")
+
+        # Store spinner and set flag for hook to display it
+        _AI_PENDING_POSTDISPLAY=$'\n'"${AI_SUGGESTION_INDENT}%F{${AI_SUGGESTION_COLOR}}${spinner_char}%f"
+
+        # Trigger a redraw so the hook runs
+        zle -R 2>/dev/null
+        return
     fi
 }
 
@@ -494,6 +611,10 @@ _ai_chpwd() {
 
 # Clear suggestion before command execution
 _ai_preexec() {
+    # Clear display IMMEDIATELY before command execution
+    _ai_clear_display
+    _AI_DISPLAY_VISIBLE=false
+
     # Kill any running background job
     if [[ -n "$_AI_SUGGESTION_PID" ]]; then
         kill $_AI_SUGGESTION_PID 2>/dev/null
@@ -503,8 +624,11 @@ _ai_preexec() {
     # Stop spinner
     _ai_stop_spinner
 
-    # Clear display
-    _ai_clear_display
+    # Reset all state
+    _AI_CURRENT_SUGGESTION=""
+    _AI_LAST_BUFFER=""
+    _AI_NAVIGATION_MODE=false
+    _AI_PENDING_POSTDISPLAY=""
 }
 
 # Update context before showing prompt (optional)
@@ -516,7 +640,9 @@ _ai_precmd() {
 # Cleanup on shell exit
 _ai_zshexit() {
     _ai_stop_spinner
-    rm -f "$_AI_SUGGESTION_PIPE"
+    # Clean up all temp files for this PID
+    rm -f "/tmp/nivuus-ai-"*"-$$" 2>/dev/null
+    rm -f "$_AI_SUGGESTION_PIPE" 2>/dev/null
 }
 
 autoload -U add-zsh-hook
