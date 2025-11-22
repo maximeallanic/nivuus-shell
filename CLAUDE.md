@@ -88,7 +88,7 @@ nvm() {
 The prompt is built synchronously in `config/05-prompt.zsh` via `build_prompt()`:
 
 ```
-[SSH] [ROOT] STATUS PATH [FIREBASE] GIT                    [JOBS]
+[SSH] [ROOT] STATUS PATH (VENV) CLOUD [FIREBASE] GIT      [JOBS]
                                                            (RPROMPT)
 ```
 
@@ -96,10 +96,15 @@ The prompt is built synchronously in `config/05-prompt.zsh` via `build_prompt()`
 - **SSH detection**: Checks `$SSH_CLIENT`, `$SSH_TTY`, `$SESSION_TYPE`
 - **Root detection**: Checks `$EUID` and `whoami`
 - **Status color**: Uses previous command exit code (`$?`)
+- **Python venv**: Shows `(venv)`, `(conda:name)`, or `(poetry)` in purple (180)
+- **Cloud context**: Shows AWS/GCP/Azure active context
+  - AWS: `aws:profile` in orange (214)
+  - GCP: `gcp:project` in cyan (110)
+  - Azure: `az:subscription` in blue (67)
+- **Firebase**: Optional, parses `~/.config/configstore/firebase-tools.json`
 - **Git info**: Cached with TTL, shows branch + status circles
   - `○` (red, empty circle): dirty/modified
   - `●` (green, filled circle): clean
-- **Firebase**: Optional, parses `~/.config/configstore/firebase-tools.json`
 
 **Right Prompt (RPROMPT)**:
 - **Background jobs**: Shows running/stopped jobs via `background_jobs_info()`
@@ -247,10 +252,12 @@ Modify `config/05-prompt.zsh`:
 
 - **`.zshrc`**: Entry point, loads modules in order, measures startup time
 - **`themes/nord.zsh`**: Nord color palette, must load before all other modules
-- **`config/05-prompt.zsh`**: Prompt builder, git caching, Firebase detection
+- **`config/05-prompt.zsh`**: Prompt builder, git caching, Firebase detection, Python venv, cloud context
 - **`config/08-vim.zsh`**: Vim wrapper functions, environment detection
 - **`config/09-nodejs.zsh`**: NVM lazy loading, auto-switch with .nvmrc, project detection
+- **`config/09-python.zsh`**: Python virtual environment detection and management (venv/conda/poetry)
 - **`config/10-ai.zsh`**: gemini-cli integration, AI command wrappers
+- **`config/21-safety.zsh`**: Command safety checks, dangerous pattern detection, safe alternatives
 - **`config/99-cleanup.zsh`**: Compilation, welcome messages, final cleanup
 - **`.vimrc.nord`**: Standalone vim config with inline Nord theme (no plugins)
 - **`bin/healthcheck`**: Diagnostic script for installation verification

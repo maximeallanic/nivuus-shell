@@ -99,8 +99,8 @@ alias py='python3'
 alias python='python3'
 alias pip='pip3'
 
-# Virtual environments
-alias venv='python3 -m venv'
+# Virtual environments (managed by 09-python.zsh)
+# alias venv - managed by 09-python.zsh
 alias activate='source venv/bin/activate'
 
 # Docker (if installed)

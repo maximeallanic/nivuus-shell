@@ -49,6 +49,7 @@ config_files=(
     07-navigation.zsh
     08-vim.zsh
     09-nodejs.zsh
+    09-python.zsh
     10-ai.zsh
     11-files.zsh
     12-network.zsh
@@ -61,6 +62,7 @@ config_files=(
     19-ai-suggestions.zsh
     20-autoupdate.zsh
     20-terminal-title.zsh
+    21-safety.zsh
     99-cleanup.zsh
 )
 

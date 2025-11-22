@@ -2,7 +2,7 @@
 # =============================================================================
 # Nivuus Prompt - Nord Theme
 # =============================================================================
-# Format: [SSH] [ROOT] STATUS PATH [FIREBASE] GIT
+# Format: [SSH] [ROOT] STATUS PATH (VENV) CLOUD [FIREBASE] GIT     [JOBS]
 # Synchronous with Git caching (2s TTL)
 # =============================================================================
 
@@ -131,6 +131,69 @@ prompt_firebase() {
 }
 
 # =============================================================================
+# Python Virtual Environment Prompt (Optional)
+# =============================================================================
+
+prompt_python_venv() {
+    [[ "${ENABLE_PYTHON_VENV:-true}" != "true" ]] && return
+
+    local venv_name=""
+
+    # Check for Conda environment
+    if [[ -n "$CONDA_DEFAULT_ENV" ]]; then
+        # Don't show 'base' unless explicitly activated
+        if [[ "$CONDA_DEFAULT_ENV" != "base" ]] || [[ -n "$CONDA_PREFIX" ]]; then
+            venv_name="conda:$CONDA_DEFAULT_ENV"
+        fi
+    # Check for standard virtual environment (venv/virtualenv)
+    elif [[ -n "$VIRTUAL_ENV" ]]; then
+        # Get just the directory name, not full path
+        venv_name=$(basename "$VIRTUAL_ENV")
+    # Check for Poetry environment
+    elif [[ -n "$POETRY_ACTIVE" ]]; then
+        venv_name="poetry"
+    fi
+
+    # Python venv in purple/magenta brackets (Nord15 - 180)
+    [[ -n "$venv_name" ]] && echo " %{%F{180}%}(${venv_name})%{%f%}"
+}
+
+# =============================================================================
+# Cloud Provider Context (Optional)
+# =============================================================================
+
+prompt_cloud_context() {
+    [[ "${ENABLE_CLOUD_PROMPT:-true}" != "true" ]] && return
+
+    local cloud_info=""
+
+    # AWS Profile
+    if [[ -n "$AWS_PROFILE" ]] && [[ "$AWS_PROFILE" != "default" ]]; then
+        cloud_info+=" %{%F{214}%}aws:${AWS_PROFILE}%{%f%}"
+    fi
+
+    # GCP Project (if not already shown by Firebase)
+    if [[ -n "$CLOUDSDK_CORE_PROJECT" ]] && [[ "${ENABLE_FIREBASE_PROMPT:-true}" != "true" ]]; then
+        [[ -n "$cloud_info" ]] && cloud_info+=" "
+        cloud_info+="%{%F{110}%}gcp:${CLOUDSDK_CORE_PROJECT}%{%f%}"
+    fi
+
+    # Azure Subscription
+    if [[ -n "$AZURE_SUBSCRIPTION_ID" ]]; then
+        # Try to get subscription name from config
+        local az_sub_name="$AZURE_SUBSCRIPTION_ID"
+        if command -v az &>/dev/null; then
+            local az_name=$(az account show --query name -o tsv 2>/dev/null)
+            [[ -n "$az_name" ]] && az_sub_name="$az_name"
+        fi
+        [[ -n "$cloud_info" ]] && cloud_info+=" "
+        cloud_info+="%{%F{67}%}az:${az_sub_name}%{%f%}"
+    fi
+
+    echo "$cloud_info"
+}
+
+# =============================================================================
 # Build Complete Prompt
 # =============================================================================
 
@@ -154,8 +217,8 @@ build_prompt() {
     # Path
     prompt_parts+=("%{%F{109}%}%~%{%f%}")
 
-    # Firebase and Git (synchronous)
-    prompt_parts+=("\$(prompt_firebase)\$(git_prompt_info) ")
+    # Python venv, Cloud context, Firebase, and Git (synchronous)
+    prompt_parts+=("\$(prompt_python_venv)\$(prompt_cloud_context)\$(prompt_firebase)\$(git_prompt_info) ")
 
     echo "${(j::)prompt_parts}"
 }

@@ -33,6 +33,9 @@ typeset -g _AI_CURRENT_SUGGESTION=""
 # Animation state
 typeset -g _AI_ANIMATION_DOTS=1
 
+# Current generation process PID
+typeset -g _AI_GENERATE_PID=""
+
 # =============================================================================
 # Context Collection
 # =============================================================================
@@ -280,34 +283,52 @@ _ai_show_inline() {
     [[ $padding_length -lt 0 ]] && padding_length=0
     local padding=$(printf ' %.0s' {1..$padding_length})
 
-    # Reset animation
-    _AI_ANIMATION_DOTS=1
+    # Show loading message (non-blocking)
+    zle -M "${padding}🤖 Generating AI suggestion... (Enter to cancel)"
+    zle -R
 
-    # Generate in background to allow animation
+    # Generate in background (non-blocking)
     local temp_file=$(mktemp)
     {
         _ai_generate "$prefix" 2>&1 | head -1 > "$temp_file"
+        # Signal completion by creating a marker file
+        touch "${temp_file}.done"
     } &!
-    local generate_pid=$!
+    _AI_GENERATE_PID=$!
 
-    # Animate while generating
-    while kill -0 $generate_pid 2>/dev/null; do
-        # Build dots string
-        local dots=$(printf '.%.0s' $(seq 1 $_AI_ANIMATION_DOTS))
-        zle -M "${padding}🤖 Generating AI suggestion${dots}"
-        zle -R
+    # Poll for completion with minimal intervals for responsiveness
+    local max_wait=200  # 4 seconds total (200 * 0.02s)
+    local count=0
 
-        # Update animation state
-        _ai_animate_dots
+    while (( count < max_wait )); do
+        # Check if process finished
+        if [[ -f "${temp_file}.done" ]]; then
+            break
+        fi
 
-        # Wait before next frame
-        sleep 0.4
+        # Check if process is still running
+        if ! kill -0 $_AI_GENERATE_PID 2>/dev/null; then
+            break
+        fi
+
+        # Minimal sleep (20ms) for better responsiveness
+        # Note: ZLE events can't interrupt widget execution,
+        # but shorter sleep means faster detection when widget restarts
+        sleep 0.02
+        ((count++))
     done
 
     # Get result
-    wait $generate_pid 2>/dev/null
-    local suggestion=$(cat "$temp_file")
-    rm -f "$temp_file"
+    wait $_AI_GENERATE_PID 2>/dev/null
+    local suggestion=""
+
+    if [[ -f "$temp_file" ]]; then
+        suggestion=$(cat "$temp_file")
+    fi
+
+    # Cleanup
+    rm -f "$temp_file" "${temp_file}.done"
+    _AI_GENERATE_PID=""
 
     # Check for errors
     if [[ "$suggestion" == ERROR:* ]]; then
@@ -340,6 +361,25 @@ _ai_accept_inline() {
 _ai_clear_inline() {
     _AI_CURRENT_SUGGESTION=""
     zle -M ""
+}
+
+# Cancel any ongoing generation
+_ai_cancel_generation() {
+    # Kill the generation process if it's running
+    if [[ -n "$_AI_GENERATE_PID" ]]; then
+        kill $_AI_GENERATE_PID 2>/dev/null
+        wait $_AI_GENERATE_PID 2>/dev/null
+        _AI_GENERATE_PID=""
+    fi
+
+    # Clear any displayed messages
+    zle -M "" 2>/dev/null
+
+    # Clear current suggestion
+    _AI_CURRENT_SUGGESTION=""
+
+    # Cancel any scheduled animations
+    _ai_cancel_animation
 }
 
 # =============================================================================
@@ -574,19 +614,27 @@ _ai_debounce_self_insert() {
 
 # Cancel debounce on accept-line (Enter)
 _ai_debounce_accept_line() {
+    # Cancel any pending debounce timer
     _ai_cancel_debounce
+
+    # Cancel any ongoing AI generation
+    _ai_cancel_generation
+
+    # Execute the command in the buffer
     zle .accept-line
 }
 
 # Cancel debounce on send-break (Ctrl+C)
 _ai_debounce_send_break() {
     _ai_cancel_debounce
+    _ai_cancel_generation
     zle .send-break
 }
 
 # Cancel debounce on clear-screen (Ctrl+L)
 _ai_debounce_clear_screen() {
     _ai_cancel_debounce
+    _ai_cancel_generation
     zle .clear-screen
 }
 
@@ -606,6 +654,26 @@ if [[ "${ENABLE_AI_AUTO_DEBOUNCE}" == "true" ]]; then
     zle -N accept-line _ai_debounce_accept_line
     zle -N send-break _ai_debounce_send_break
     zle -N clear-screen _ai_debounce_clear_screen
+else
+    # Even without auto-debounce, we need to cancel manual generations
+    _ai_accept_line_no_debounce() {
+        _ai_cancel_generation
+        zle .accept-line
+    }
+
+    _ai_send_break_no_debounce() {
+        _ai_cancel_generation
+        zle .send-break
+    }
+
+    _ai_clear_screen_no_debounce() {
+        _ai_cancel_generation
+        zle .clear-screen
+    }
+
+    zle -N accept-line _ai_accept_line_no_debounce
+    zle -N send-break _ai_send_break_no_debounce
+    zle -N clear-screen _ai_clear_screen_no_debounce
 fi
 
 # Bind for inline mode
@@ -634,7 +702,8 @@ Mode 1: Inline (Default with Auto-Debounce)
   2. Wait 2 seconds (debounce delay)
   3. Suggestion appears at bottom: "🤖 git status (Ctrl+↓ to accept)"
   4. Press Ctrl+↓ to accept suggestion
-  5. Continue typing to clear and reset timer
+  5. Press Enter to cancel generation and execute your command
+  6. Continue typing to clear and reset timer
 
 Mode 2: Interactive Menu (Manual)
   Trigger: Ctrl+↓ (or Ctrl+2)
@@ -684,7 +753,9 @@ Keybindings:
   Ctrl+Space - Show AI menu manually
 
 During generation:
+  Enter      - Cancel generation and execute your command
   Ctrl+C     - Cancel generation and return to prompt
+  Ctrl+L     - Cancel generation and clear screen
 
 Menu navigation:
   ↑/↓        - Navigate suggestions

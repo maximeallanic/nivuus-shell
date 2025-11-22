@@ -159,6 +159,138 @@ Automatically detects and suggests commands for:
 
 ---
 
+## Python Development
+
+Python virtual environment detection and management with automatic display in prompt.
+
+### Virtual Environment Detection
+- **venv/virtualenv** - Shows `(venv)` in prompt
+- **Conda** - Shows `(conda:env-name)` in prompt
+- **Poetry** - Shows `(poetry)` in prompt
+- **Auto-activation** - Optional auto-activation when entering project (disabled by default)
+
+### Commands
+```bash
+venv                    # Activate venv in current directory (.venv, venv, env)
+venv-create [name]      # Create new virtual environment (default: .venv)
+venv-new [name]         # Alias for venv-create
+venv-off                # Deactivate current virtual environment
+venv-info               # Show info about active environment
+venv-status             # Alias for venv-info
+activate                # Quick activate for ./venv/bin/activate
+```
+
+### Configuration
+```bash
+# Enable auto-activation when entering directory with venv/
+export ENABLE_PYTHON_AUTO_ACTIVATE=true
+
+# Disable Python venv in prompt
+export ENABLE_PYTHON_VENV=false
+```
+
+### Examples
+```bash
+# Create and use venv
+venv-create             # Creates .venv
+venv                    # Activates .venv
+
+# Multiple venvs
+venv-create myenv       # Create named venv
+venv myenv              # Activate named venv
+
+# Check status
+venv-info               # Shows active venv details
+```
+
+---
+
+## Cloud Provider Context
+
+Display active cloud provider context in your prompt for AWS, GCP, and Azure.
+
+### Supported Providers
+- **AWS** - Shows active profile: `aws:production`
+- **GCP** - Shows project: `gcp:my-project`
+- **Azure** - Shows subscription: `az:my-subscription`
+
+### What's Displayed
+- **AWS**: `$AWS_PROFILE` (only if not "default")
+- **GCP**: `$CLOUDSDK_CORE_PROJECT` (only if Firebase prompt disabled)
+- **Azure**: `$AZURE_SUBSCRIPTION_ID` or subscription name
+
+### Configuration
+```bash
+# Disable cloud context in prompt
+export ENABLE_CLOUD_PROMPT=false
+```
+
+### Examples
+```bash
+# AWS
+export AWS_PROFILE=production
+# Prompt shows: aws:production
+
+# GCP
+gcloud config set project my-project
+# Prompt shows: gcp:my-project
+
+# Azure
+az account set --subscription "My Subscription"
+# Prompt shows: az:My Subscription
+```
+
+---
+
+## Command Safety Checks
+
+Protection against dangerous commands with automatic warnings and confirmations.
+
+### Critical Checks (Require 'yes' confirmation)
+- `rm -rf /` or `rm -rf ~` - Deleting critical directories
+- `chmod 777 /` - Dangerous permissions on root
+- `dd` to `/dev/sd*` - Raw disk writes
+- `mkfs`, `fdisk` - Filesystem operations
+- Removing `/boot`, `/etc`, `/usr`, `/var` - System directories
+- Removing `sudo` package - Loss of admin access
+
+### Warning Checks (Press Enter to continue)
+- `rm -rf` - Recursive force deletion
+- `git push --force` - Force push
+- `sudo rm` - Root deletion
+- `chmod 777` - World-writable permissions
+- `find ... -delete` - Mass deletion
+
+### Safe Alternatives
+```bash
+safe-rm <files>         # Warns before deleting important files
+safe-chmod <mode>       # Warns about dangerous permissions
+safety-help             # Show safety system help
+```
+
+### Configuration
+```bash
+# Disable all safety checks
+export ENABLE_SAFETY_CHECKS=false
+
+# Enable safe aliases (override rm and chmod)
+export ENABLE_SAFE_ALIASES=true
+```
+
+### Examples
+```bash
+# This will require typing 'yes':
+rm -rf /tmp/important
+
+# This will show a warning:
+chmod 777 myfile.sh
+
+# Safe alternative with automatic checks:
+safe-rm .env .npmrc
+```
+
+---
+
 ## System Monitoring
 
 Keep your system healthy and performant.

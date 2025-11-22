@@ -40,22 +40,28 @@ if command -v bat &>/dev/null; then
     # Use bat with Nord theme
     export BAT_THEME="Nord"
 
-    alias cat='bat --theme=Nord --style=auto'
-    alias less='bat --theme=Nord --paging=always'
+    # Style options: plain (no decorations), auto (all decorations), numbers, grid, header
+    # Customize with: export BAT_STYLE="numbers,grid"
+    local bat_style="${BAT_STYLE:-plain}"
+
+    alias cat="bat --theme=Nord --style=${bat_style}"
+    alias less="bat --theme=Nord --style=${bat_style} --paging=always"
 
     # Set bat as default pager
-    export PAGER="bat --theme=Nord --paging=always"
+    export PAGER="bat --theme=Nord --style=${bat_style} --paging=always"
     export MANPAGER="sh -c 'col -bx | bat --theme=Nord -l man -p'"
 
 elif command -v batcat &>/dev/null; then
     # Debian/Ubuntu uses batcat (conflict with bacula)
     export BAT_THEME="Nord"
 
-    alias bat='batcat'
-    alias cat='batcat --theme=Nord --style=auto'
-    alias less='batcat --theme=Nord --paging=always'
+    local bat_style="${BAT_STYLE:-plain}"
 
-    export PAGER="batcat --theme=Nord --paging=always"
+    alias bat='batcat'
+    alias cat="batcat --theme=Nord --style=${bat_style}"
+    alias less="batcat --theme=Nord --style=${bat_style} --paging=always"
+
+    export PAGER="batcat --theme=Nord --style=${bat_style} --paging=always"
     export MANPAGER="sh -c 'col -bx | batcat --theme=Nord -l man -p'"
 fi
 

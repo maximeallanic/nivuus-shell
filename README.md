@@ -14,6 +14,9 @@
 - 📝 **Modern Vim** - Ctrl+C/V/X/A shortcuts
 - 🔍 **Smart Navigation** - History prefix search with ↑/↓
 - 📦 **Auto Node.js** - Version switching with .nvmrc
+- 🐍 **Python Venv** - Auto-detection in prompt (venv/conda/poetry)
+- ☁️ **Cloud Context** - AWS/GCP/Azure in prompt
+- 🛡️ **Safety Checks** - Warns before dangerous commands
 - 🌿 **Git Integration** - Fast shortcuts + beautiful prompt
 - 🛠️ **Zero Config** - Works out of the box
 
@@ -142,6 +145,46 @@ nvm-install             # Install NVM
 nvm-health              # Check NVM status
 ```
 
+### Python Virtual Environments
+
+Automatic detection and display of Python virtual environments:
+
+```bash
+venv                    # Activate venv in current directory
+venv-create             # Create new .venv
+venv-info               # Show active environment info
+```
+
+**Prompt shows:**
+- `(venv)` for venv/virtualenv
+- `(conda:myenv)` for Conda environments
+- `(poetry)` for Poetry
+
+### Cloud Provider Context
+
+See your active cloud context in the prompt:
+
+```bash
+# AWS
+export AWS_PROFILE=production    # Shows: aws:production
+
+# GCP
+gcloud config set project myapp  # Shows: gcp:myapp
+
+# Azure
+az account set --subscription X  # Shows: az:X
+```
+
+### Command Safety
+
+Automatic protection against dangerous commands:
+
+```bash
+rm -rf /                # Requires typing 'yes' to confirm
+chmod 777 file          # Shows warning
+safe-rm .env            # Extra protection for important files
+```
+
 ### File Management
 
 ```bash
@@ -179,16 +222,17 @@ Nivuus uses the beautiful [Nord color scheme](https://www.nordtheme.com/) throug
 ### Prompt Format
 
 ```
-[hostname] > ~/path [firebase-project] git:(branch)x
+[hostname] > ~/path (venv) aws:prod [firebase-project] git:(branch)○     [jobs]
 ```
 
 - **Green `>`** - Last command succeeded
 - **Red `>`** - Last command failed
-- **[hostname]** - Shows in SSH sessions
-- **`x`** - Indicates uncommitted changes
-- **Cyan path** - Current directory
-- **Yellow [project]** - Active Firebase project
-- **Git info** - Current branch with status
+- **[hostname]** - Shows in SSH sessions (cyan)
+- **(venv)** - Active Python virtual environment (purple)
+- **aws:prod** - Cloud provider context (AWS/GCP/Azure)
+- **[project]** - Active Firebase project (yellow)
+- **git:(branch)○** - Git branch with status (○ dirty, ● clean)
+- **[jobs]** - Background jobs on the right (RPROMPT)
 
 ### Customization
 
@@ -199,6 +243,21 @@ Edit `~/.zsh_local` to customize:
 export GIT_PROMPT_CACHE_TTL=5          # Git cache (default: 2s)
 export ENABLE_FIREBASE_PROMPT=false    # Disable Firebase info
 export ENABLE_PROJECT_DETECTION=false  # Disable project detection
+
+# Python virtual environments
+export ENABLE_PYTHON_VENV=false        # Disable venv in prompt
+export ENABLE_PYTHON_AUTO_ACTIVATE=true # Auto-activate venv on cd
+
+# Cloud provider context
+export ENABLE_CLOUD_PROMPT=false       # Disable cloud context in prompt
+
+# Command safety
+export ENABLE_SAFETY_CHECKS=false      # Disable safety warnings
+export ENABLE_SAFE_ALIASES=true        # Override rm/chmod with safe versions
+
+# bat (cat) styling
+export BAT_STYLE="plain"                # Options: plain, auto, numbers, grid, header
+                                        # Combine: "numbers,grid"
 
 # AI configuration
 export GEMINI_MODEL='gemini-2.0-flash'
