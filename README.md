@@ -232,6 +232,53 @@ Automatic backups are created at:
 - During installation: `~/.config/nivuus-shell-backup/`
 - Auto-maintenance: Weekly cleanup
 
+## 🔄 Updating
+
+Nivuus Shell includes an automatic update system that checks for updates weekly and installs them automatically.
+
+### Automatic Updates
+
+- **Weekly checks** - Checks for updates every 7 days
+- **Automatic installation** - Updates are installed automatically with backup
+- **Safe rollback** - Previous versions backed up to `~/.config/nivuus-shell-backup/`
+
+### Manual Update
+
+```bash
+nivuus-update               # Check for and install updates manually
+```
+
+### Configuration
+
+Customize auto-update behavior in `~/.zsh_local`:
+
+```bash
+# Disable auto-updates
+export ENABLE_AUTOUPDATE=false
+
+# Change check frequency (days)
+export AUTOUPDATE_CHECK_FREQUENCY_DAYS=14
+
+# Change remote repository
+export NIVUUS_REMOTE_REPO=git@github.com:yourfork/nivuus-shell.git
+
+# Change branch
+export NIVUUS_BRANCH=master
+```
+
+### Rollback
+
+If an update causes issues, restore from the timestamped backup:
+
+```bash
+# List backups
+ls ~/.config/nivuus-shell-backup/
+
+# Restore from backup
+cp -r ~/.config/nivuus-shell-backup/pre-update-YYYYMMDD-HHMMSS/nivuus-shell ~/.nivuus-shell
+exec zsh
+```
+
 ## 📁 Project Structure
 
 ```
@@ -247,6 +294,7 @@ nivuus-shell/
 │   ├── 08-vim.zsh         # Vim integration
 │   ├── 09-nodejs.zsh      # Node.js/NVM
 │   ├── 10-ai.zsh          # AI commands
+│   ├── 20-autoupdate.zsh  # Auto-update system
 │   └── ...                # Other modules
 ├── themes/
 │   └── nord.zsh           # Nord color palette

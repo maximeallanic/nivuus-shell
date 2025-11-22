@@ -57,6 +57,7 @@ config_files=(
     17-colorization.zsh
     18-autosuggestions.zsh
     19-ai-suggestions.zsh
+    20-autoupdate.zsh
     99-cleanup.zsh
 )
 

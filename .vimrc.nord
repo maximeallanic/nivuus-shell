@@ -13,39 +13,31 @@ filetype plugin indent on     " Enable filetype detection
 syntax on                     " Enable syntax highlighting
 
 " -----------------------------------------------------------------------------
-" Nord Color Scheme
+" Nord Color Scheme - Official Theme
 " -----------------------------------------------------------------------------
 
 set background=dark
-set termguicolors
 
-" Nord palette
-let g:nord0_gui = "#2E3440"
-let g:nord1_gui = "#3B4252"
-let g:nord2_gui = "#434C5E"
-let g:nord3_gui = "#4C566A"
-let g:nord4_gui = "#D8DEE9"
-let g:nord5_gui = "#E5E9F0"
-let g:nord6_gui = "#ECEFF4"
-let g:nord7_gui = "#8FBCBB"
-let g:nord8_gui = "#88C0D0"
-let g:nord9_gui = "#81A1C1"
-let g:nord10_gui = "#5E81AC"
-let g:nord11_gui = "#BF616A"
-let g:nord12_gui = "#D08770"
-let g:nord13_gui = "#EBCB8B"
-let g:nord14_gui = "#A3BE8C"
-let g:nord15_gui = "#B48EAD"
+" Auto-install vim-plug if not present
+let data_dir = has('nvim') ? stdpath('data') . '/site' : '~/.vim'
+if empty(glob(data_dir . '/autoload/plug.vim'))
+  silent execute '!curl -fLo '.data_dir.'/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+endif
 
-" Apply Nord colors
-highlight Normal guifg=#D8DEE9 guibg=#2E3440
-highlight Comment guifg=#4C566A
-highlight LineNr guifg=#4C566A guibg=#2E3440
-highlight CursorLine guibg=#3B4252
-highlight Visual guibg=#434C5E
-highlight Search guibg=#EBCB8B guifg=#2E3440
-highlight StatusLine guifg=#D8DEE9 guibg=#3B4252
-highlight VertSplit guifg=#4C566A guibg=#2E3440
+" Plugin management with vim-plug
+call plug#begin('~/.vim/plugged')
+Plug 'arcticicestudio/nord-vim'
+call plug#end()
+
+" Apply Nord theme
+try
+    colorscheme nord
+catch
+    " Fallback to default if Nord not installed yet
+    colorscheme default
+    echo "Nord theme will be installed on next Vim start. Run :PlugInstall to install now."
+endtry
 
 " -----------------------------------------------------------------------------
 " Editor Settings

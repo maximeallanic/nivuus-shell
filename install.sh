@@ -19,6 +19,8 @@ NC='\033[0m'
 # Configuration
 VERSION="1.0.0"
 REPO_URL="https://github.com/maximeallanic/nivuus-shell"
+GIT_REMOTE="git@github.com:maximeallanic/nivuus-shell.git"
+GIT_BRANCH="master"
 
 # =============================================================================
 # Functions
@@ -304,6 +306,38 @@ EOF
     print_info "Edit ~/.zsh_local to add your customizations"
 }
 
+# Initialize git repository for auto-updates
+init_git_repo() {
+    echo ""
+    echo "Configuring auto-update system..."
+
+    # Only for user installations (system installations don't need git)
+    if [[ "$INSTALL_MODE" == "system" ]]; then
+        print_info "System-wide installation: auto-update not configured"
+        return
+    fi
+
+    # Initialize git if not already a repo
+    if [[ ! -d "$INSTALL_DIR/.git" ]]; then
+        (
+            cd "$INSTALL_DIR"
+            git init &>/dev/null
+            git remote add origin "$GIT_REMOTE" &>/dev/null || true
+            git add . &>/dev/null
+            git commit -m "Initial Nivuus Shell installation" &>/dev/null || true
+            git branch -M "$GIT_BRANCH" &>/dev/null
+            git fetch origin "$GIT_BRANCH" &>/dev/null || true
+        )
+        print_success "Initialized git repository for auto-updates"
+    else
+        print_info "Git repository already initialized"
+    fi
+
+    # Create update check timestamp file
+    date +%s > "$HOME/.nivuus-shell-last-update-check"
+    print_success "Auto-update system configured (checks weekly)"
+}
+
 # Suggest optional tools
 suggest_optional_tools() {
     echo ""
@@ -397,6 +431,7 @@ print_completion() {
     echo "  • vedit <file> - Edit with modern vim (Ctrl+C/V)"
     echo "  • ↑ - Smart history search with prefix"
     echo "  • aihelp - Show all AI commands"
+    echo "  • nivuus-update - Check for and install updates"
     echo ""
 
     echo "Documentation:"
@@ -448,6 +483,9 @@ main() {
 
     # Create local configuration
     create_local_config
+
+    # Initialize git repository for auto-updates
+    init_git_repo
 
     # Suggest optional tools
     suggest_optional_tools
