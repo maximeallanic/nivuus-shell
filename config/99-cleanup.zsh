@@ -111,3 +111,13 @@ export NIVUUS_SHELL_LOADED=1
 
 # Export version
 export NIVUUS_SHELL_VERSION="1.0.0"
+
+# =============================================================================
+# AI Suggestions Keybindings (Final Override)
+# =============================================================================
+# Re-apply AI keybindings here to override any completion system bindings
+
+if [[ "${NIVUUS_AI_SUGGESTIONS_LOADED}" == "1" ]]; then
+    # Tab to accept AI suggestions
+    bindkey '^I' ai-accept-suggestion
+fi
