@@ -69,18 +69,30 @@ _ai_generate() {
     fi
 
     local context=$(_ai_get_context)
-    local prompt="Complete this command with ${AI_NUM_SUGGESTIONS} alternatives (one per line, no numbering):
+    local prompt="You are a shell command completion assistant. Generate ${AI_NUM_SUGGESTIONS} valid, executable shell commands.
 
-Command: $prefix
+STRICT RULES:
+- Output ONLY executable shell commands (bash/zsh)
+- ONE command per line
+- NO explanations, NO numbering, NO markdown, NO text
+- Each line must be a complete, valid command
+- Commands should complete or relate to the input
+
+Context:
 $context
-Completions:"
+
+Input: $prefix
+
+Commands:"
 
     local result=$(gemini --model "${GEMINI_MODEL:-gemini-2.0-flash}" -o text "$prompt" 2>&1 | \
         grep -v '^\[' | \
         grep -v '^Loaded' | \
         grep -v '^Cached' | \
         sed 's/^[0-9]*\.\s*//' | \
+        sed 's/^-\s*//' | \
         grep -E '^[a-zA-Z0-9_/\.\-]' | \
+        grep -v -iE '^(translate|generate|output|here|the|this|that|rules|commands|input)' | \
         head -${AI_NUM_SUGGESTIONS})
 
     if [[ -n "$result" ]]; then
