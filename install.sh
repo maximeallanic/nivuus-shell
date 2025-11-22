@@ -287,7 +287,7 @@ create_local_config() {
 
 # Get your API key from: https://makersuite.google.com/app/apikey
 # export GEMINI_API_KEY='your-api-key-here'
-# export GEMINI_MODEL='gemini-2.0-flash-exp'
+# export GEMINI_MODEL='gemini-2.5-flash-lite'
 
 # =============================================================================
 # Performance Tuning

@@ -113,11 +113,8 @@ export NIVUUS_SHELL_LOADED=1
 export NIVUUS_SHELL_VERSION="1.0.0"
 
 # =============================================================================
-# AI Suggestions Keybindings (Final Override)
+# AI Suggestions Integration
 # =============================================================================
-# Re-apply AI keybindings here to override any completion system bindings
-
-if [[ "${NIVUUS_AI_SUGGESTIONS_LOADED}" == "1" ]]; then
-    # Tab to accept AI suggestions
-    bindkey '^I' ai-accept-suggestion
-fi
+# AI suggestions now integrated with zsh-autosuggestions
+# See config/19-ai-suggestions.zsh for Gemini custom strategy
+# Keybindings configured in config/18-autosuggestions.zsh

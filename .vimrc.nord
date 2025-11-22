@@ -11,6 +11,7 @@
 set nocompatible              " Disable vi compatibility
 filetype plugin indent on     " Enable filetype detection
 syntax on                     " Enable syntax highlighting
+set backspace=indent,eol,start " Allow backspace over everything in insert mode
 
 " -----------------------------------------------------------------------------
 " Nord Color Scheme - Official Theme

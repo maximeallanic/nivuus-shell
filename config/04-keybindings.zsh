@@ -10,14 +10,21 @@ bindkey -e
 # History Navigation
 # =============================================================================
 
-# Standard history navigation
+# Up/Down arrows: Prefix-based history search
+# (Type "git s" then press Up → shows only commands starting with "git s")
+bindkey '^[[A' history-search-backward    # Up arrow
+bindkey '^[OA' history-search-backward    # Up arrow (alternative)
+bindkey '^[[B' history-search-forward     # Down arrow
+bindkey '^[OB' history-search-forward     # Down arrow (alternative)
+
+# Ctrl+P/N: Standard history navigation (no prefix filter)
 bindkey '^P' up-history
 bindkey '^N' down-history
 
-# Ctrl+R for reverse search
+# Ctrl+R for reverse search (interactive)
 bindkey '^R' history-incremental-search-backward
 
-# Ctrl+S for forward search
+# Ctrl+S for forward search (interactive)
 bindkey '^S' history-incremental-search-forward
 
 # =============================================================================

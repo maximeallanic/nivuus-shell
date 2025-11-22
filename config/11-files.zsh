@@ -142,6 +142,7 @@ _suggest_modern_tools() {
     fi
 
     command -v rg &>/dev/null || suggestions+=("rg (ripgrep): cargo install ripgrep")
+    command -v timg &>/dev/null || suggestions+=("timg (terminal images): sudo apt install timg")
 
     if [[ ${#suggestions[@]} -gt 0 ]]; then
         echo "💡 Optional modern tools:"

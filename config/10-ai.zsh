@@ -41,7 +41,7 @@ AI Suggestions (Real-time):
   Help:    ai_suggestions_help
 
 Configuration:
-  Model: ${GEMINI_MODEL:-gemini-2.0-flash-exp}
+  Model: ${GEMINI_MODEL:-gemini-2.5-flash-lite}
   Status: $gemini_status
 
 Setup:

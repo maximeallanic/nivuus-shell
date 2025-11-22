@@ -57,9 +57,9 @@ git_prompt_info() {
     # Check for modifications (using porcelain for reliability)
     local status_icon=""
     if [[ -n $(git status --porcelain 2>/dev/null) ]]; then
-        status_icon="%{%F{167}%}◇%{%f%}"  # Red empty diamond when dirty
+        status_icon="%{%F{167}%}○%{%f%}"  # Red empty circle when dirty
     else
-        status_icon="%{%F{143}%}◆%{%f%}"  # Green filled diamond when clean
+        status_icon="%{%F{143}%}●%{%f%}"  # Green filled circle when clean
     fi
 
     # Build git prompt with Nord colors

@@ -41,6 +41,7 @@ done
 # =============================================================================
 
 # Strategy: history first, then completion
+# Note: AI suggestions are now handled via completion menu (config/19-ai-suggestions.zsh)
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 
 # Use async mode for better performance
@@ -88,6 +89,9 @@ bindkey '^[Oc' autosuggest-accept-word
 
 # Clear suggestion with Ctrl+C (already default)
 # bindkey '^C' autosuggest-clear
+
+# Note: Up/Down arrows use default behavior (history navigation)
+# AI suggestions are accessed via Tab key (see config/19-ai-suggestions.zsh)
 
 # =============================================================================
 # Nord Theme Colors

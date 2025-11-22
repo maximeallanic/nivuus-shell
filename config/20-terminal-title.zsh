@@ -49,19 +49,39 @@ _get_display_path() {
     echo "${PWD:t}"
 }
 
+# Get emoji based on directory context
+_get_directory_emoji() {
+    # Home directory
+    if [[ "$PWD" == "$HOME" ]]; then
+        echo "💻"
+        return
+    fi
+
+    # Git repository
+    if git rev-parse --git-dir &>/dev/null; then
+        echo "🔧"
+        return
+    fi
+
+    # Normal directory
+    echo "📁"
+}
+
 # =============================================================================
 # Hook Functions
 # =============================================================================
 
 # Called before each prompt (when returning to shell)
 _terminal_title_precmd() {
+    local emoji=$(_get_directory_emoji)
     local dir_path=$(_get_display_path)
-    _set_terminal_title "$dir_path"
+    _set_terminal_title "$emoji $dir_path"
 }
 
 # Called before executing a command
 _terminal_title_preexec() {
     local command="$1"
+    local emoji=$(_get_directory_emoji)
     local dir_path=$(_get_display_path)
 
     # Truncate very long commands
@@ -69,7 +89,7 @@ _terminal_title_preexec() {
         command="${command:0:47}..."
     fi
 
-    _set_terminal_title "$dir_path - $command"
+    _set_terminal_title "$emoji $dir_path → $command"
 }
 
 # =============================================================================

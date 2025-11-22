@@ -60,6 +60,20 @@ elif command -v batcat &>/dev/null; then
 fi
 
 # =============================================================================
+# timg (terminal image viewer)
+# =============================================================================
+
+if command -v timg &>/dev/null; then
+    # Wrapper function pour afficher des images dans le terminal
+    img() {
+        timg "$@"
+    }
+
+    # Alias alternatif
+    alias showimg='img'
+fi
+
+# =============================================================================
 # delta (git diff with syntax highlighting)
 # =============================================================================
 
@@ -156,6 +170,7 @@ Modern Tools:
   cat               - bat with syntax highlighting
   less              - bat as pager
   git diff          - delta with Nord theme
+  img, showimg      - timg for terminal image display
 
 Colorized Commands (via grc):
   tail, ping, ps, df, du, netstat, dig
@@ -169,6 +184,6 @@ Configuration:
 
 Install missing tools:
   cargo install eza bat git-delta ripgrep
-  sudo apt install grc
+  sudo apt install grc timg
 EOF
 }

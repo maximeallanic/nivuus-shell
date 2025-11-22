@@ -205,7 +205,7 @@ export ENABLE_PROJECT_DETECTION=false  # Disable project detection
 
 # AI configuration
 export GEMINI_API_KEY='your-key'
-export GEMINI_MODEL='gemini-2.0-flash-exp'
+export GEMINI_MODEL='gemini-2.5-flash-lite'
 ```
 
 ## 📊 Performance

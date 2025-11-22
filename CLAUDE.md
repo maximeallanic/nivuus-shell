@@ -114,7 +114,7 @@ The vim system (`config/08-vim.zsh` + `.vimrc.nord`) uses environment detection:
 
 - **No fallback**: If `gemini-cli` not installed, shows installation instructions
 - **API key**: Must be in `~/.zsh_local` as `GEMINI_API_KEY`
-- **Model config**: `GEMINI_MODEL` defaults to `gemini-2.0-flash-exp`
+- **Model config**: `GEMINI_MODEL` defaults to `gemini-2.5-flash-lite`
 - Functions (`??`, `?git`, `why`, `explain`, `ask`) are wrappers calling `gemini-cli ask`
 
 ## Critical Implementation Details
