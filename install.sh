@@ -208,14 +208,22 @@ install_nivuus() {
     # Create installation directory
     mkdir -p "$INSTALL_DIR"
 
-    # Copy files
-    cp -r "$SCRIPT_DIR/config" "$INSTALL_DIR/"
-    cp -r "$SCRIPT_DIR/themes" "$INSTALL_DIR/"
-    cp -r "$SCRIPT_DIR/bin" "$INSTALL_DIR/"
-    cp "$SCRIPT_DIR/.vimrc.nord" "$INSTALL_DIR/"
-    cp "$SCRIPT_DIR/.zshrc" "$INSTALL_DIR/"
+    # Clean up old .zwc files in destination to avoid permission issues
+    find "$INSTALL_DIR" -name '*.zwc' -type f -delete 2>/dev/null
 
-    # Remove compiled files (they will be regenerated)
+    # Copy files (suppress .zwc permission errors)
+    cp -r "$SCRIPT_DIR/config" "$INSTALL_DIR/" 2>&1 | grep -v "\.zwc.*Permission denied" || true
+    cp -r "$SCRIPT_DIR/themes" "$INSTALL_DIR/" 2>/dev/null
+    cp -r "$SCRIPT_DIR/bin" "$INSTALL_DIR/" 2>/dev/null
+    cp "$SCRIPT_DIR/.vimrc.nord" "$INSTALL_DIR/" 2>/dev/null
+    cp "$SCRIPT_DIR/.zshrc" "$INSTALL_DIR/" 2>/dev/null
+
+    # Copy plugins directory if it exists
+    if [[ -d "$SCRIPT_DIR/plugins" ]]; then
+        cp -r "$SCRIPT_DIR/plugins" "$INSTALL_DIR/" 2>&1 | grep -v "\.zwc.*Permission denied" || true
+    fi
+
+    # Remove any compiled files that got copied (they will be regenerated)
     find "$INSTALL_DIR" -name '*.zwc' -type f -delete 2>/dev/null
 
     print_success "Copied Nivuus Shell files to $INSTALL_DIR"

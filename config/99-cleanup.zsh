@@ -27,7 +27,7 @@ if [[ "${NIVUUS_NO_COMPILE:-0}" != "1" ]]; then
     if [[ -d "$NIVUUS_SHELL_DIR/config" ]]; then
         for config_file in "$NIVUUS_SHELL_DIR"/config/*.zsh; do
             if [[ (! -f "${config_file}.zwc" || "$config_file" -nt "${config_file}.zwc") ]]; then
-                zcompile "$config_file" &>/dev/null &
+                { zcompile "$config_file" &>/dev/null } &!
             fi
         done
     fi
