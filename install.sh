@@ -215,6 +215,9 @@ install_nivuus() {
     cp "$SCRIPT_DIR/.vimrc.nord" "$INSTALL_DIR/"
     cp "$SCRIPT_DIR/.zshrc" "$INSTALL_DIR/"
 
+    # Remove compiled files (they will be regenerated)
+    find "$INSTALL_DIR" -name '*.zwc' -type f -delete 2>/dev/null
+
     print_success "Copied Nivuus Shell files to $INSTALL_DIR"
 
     # Setup .zshrc
