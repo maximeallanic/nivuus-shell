@@ -88,14 +88,27 @@ nvm() {
 The prompt is built synchronously in `config/05-prompt.zsh` via `build_prompt()`:
 
 ```
-[SSH] [ROOT] STATUS PATH [FIREBASE] GIT
+[SSH] [ROOT] STATUS PATH [FIREBASE] GIT                    [JOBS]
+                                                           (RPROMPT)
 ```
 
+**Main Prompt (left)**:
 - **SSH detection**: Checks `$SSH_CLIENT`, `$SSH_TTY`, `$SESSION_TYPE`
 - **Root detection**: Checks `$EUID` and `whoami`
 - **Status color**: Uses previous command exit code (`$?`)
-- **Git info**: Cached with TTL, shows branch + dirty status (`x`)
+- **Git info**: Cached with TTL, shows branch + status circles
+  - `○` (red, empty circle): dirty/modified
+  - `●` (green, filled circle): clean
 - **Firebase**: Optional, parses `~/.config/configstore/firebase-tools.json`
+
+**Right Prompt (RPROMPT)**:
+- **Background jobs**: Shows running/stopped jobs via `background_jobs_info()`
+- Uses ZSH native variables: `${(kv)jobstates}` and `${jobtexts}`
+- Intelligent display:
+  - ≤ 2 jobs: Shows names (`▶ vim ⏸ npm`)
+  - \> 2 jobs: Shows counts (`▶ 3 ⏸ 1`)
+- Colors: green (143) for running, red (167) for stopped
+- Updates automatically on every prompt without manual `jobs` command
 
 All colors use Nord palette via `themes/nord.zsh` color mappings.
 
