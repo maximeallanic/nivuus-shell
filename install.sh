@@ -285,9 +285,8 @@ create_local_config() {
 # AI Configuration (gemini-cli)
 # =============================================================================
 
-# Get your API key from: https://makersuite.google.com/app/apikey
-# export GEMINI_API_KEY='your-api-key-here'
-# export GEMINI_MODEL='gemini-2.5-flash-lite'
+# Configure Gemini model (requires gemini-cli installed)
+# export GEMINI_MODEL='gemini-2.0-flash'
 
 # =============================================================================
 # Performance Tuning
@@ -432,9 +431,8 @@ print_completion() {
 
     echo "Next steps:"
     echo "  1. Restart your terminal or run: source ~/.zshrc"
-    echo "  2. Configure AI: Edit ~/.zsh_local and add GEMINI_API_KEY"
-    echo "  3. Run 'healthcheck' to verify installation"
-    echo "  4. Run 'benchmark' to test performance"
+    echo "  2. Run 'healthcheck' to verify installation"
+    echo "  3. Run 'benchmark' to test performance"
     echo ""
 
     echo "Quick tips:"

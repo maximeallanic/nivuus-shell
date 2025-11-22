@@ -73,11 +73,8 @@ aihelp                  # Show all AI commands
 ```
 
 **Setup AI:**
-1. Get API key from: https://makersuite.google.com/app/apikey
-2. Add to `~/.zsh_local`:
-   ```bash
-   export GEMINI_API_KEY='your-api-key'
-   ```
+- AI commands require `gemini-cli` to be installed
+- Install: `npm install -g @google/gemini-cli`
 
 ### Modern Vim Editing
 
@@ -204,8 +201,7 @@ export ENABLE_FIREBASE_PROMPT=false    # Disable Firebase info
 export ENABLE_PROJECT_DETECTION=false  # Disable project detection
 
 # AI configuration
-export GEMINI_API_KEY='your-key'
-export GEMINI_MODEL='gemini-2.5-flash-lite'
+export GEMINI_MODEL='gemini-2.0-flash'
 ```
 
 ## 📊 Performance
@@ -388,10 +384,7 @@ export GIT_PROMPT_CACHE_TTL=5
 
 ```bash
 # Install gemini-cli
-npm install -g gemini-cli
-
-# Add API key to ~/.zsh_local
-export GEMINI_API_KEY='your-key'
+npm install -g @google/gemini-cli
 ```
 
 ### Git prompt not showing

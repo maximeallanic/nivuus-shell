@@ -75,7 +75,7 @@ Command: $prefix
 $context
 Completions:"
 
-    local result=$(gemini --model "${GEMINI_MODEL:-gemini-2.5-flash-lite}" -o text "$prompt" 2>&1 | \
+    local result=$(gemini --model "${GEMINI_MODEL:-gemini-2.0-flash}" -o text "$prompt" 2>&1 | \
         grep -v '^\[' | \
         grep -v '^Loaded' | \
         grep -v '^Cached' | \
