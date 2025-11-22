@@ -20,7 +20,7 @@ fi
 # =============================================================================
 
 typeset -g AI_SUGGESTION_MIN_CHARS="${AI_SUGGESTION_MIN_CHARS:-3}"
-typeset -g AI_NUM_SUGGESTIONS="${AI_NUM_SUGGESTIONS:-5}"
+typeset -g AI_NUM_SUGGESTIONS="${AI_NUM_SUGGESTIONS:-3}"
 
 # Cache
 typeset -gA _AI_CACHE
@@ -32,20 +32,71 @@ typeset -gA _AI_CACHE_TIME
 
 _ai_get_context() {
     local context=""
+
+    # Working directory
     context+="Dir: $PWD\n"
 
-    # Recent history
-    local hist=$(fc -ln -5 2>/dev/null | sed 's/^[[:space:]]*//' | grep -v "^$" | tail -3 | tr '\n' ';')
-    [[ -n "$hist" ]] && context+="Recent: $hist\n"
+    # ALL files in current directory (limited to 50 to avoid huge repos)
+    local files=$(ls -1 2>/dev/null | head -50 | tr '\n' ', ' | sed 's/,$//')
+    [[ -n "$files" ]] && context+="Files (all): $files\n"
 
-    # Project type
-    [[ -f "package.json" ]] && context+="Project: Node.js\n"
-    [[ -f "go.mod" ]] && context+="Project: Go\n"
+    # Recent command history (last 20 commands)
+    local hist=$(fc -ln -25 2>/dev/null | sed 's/^[[:space:]]*//' | grep -v "^$" | tail -20 | tr '\n' ';')
+    [[ -n "$hist" ]] && context+="Recent commands: $hist\n"
 
-    # Git
+    # Environment variables
+    context+="User: $USER\n"
+    context+="Shell: $SHELL\n"
+    context+="Home: $HOME\n"
+
+    # Full PATH (truncated if too long)
+    local path_truncated=$(echo "$PATH" | cut -c1-200)
+    [[ ${#PATH} -gt 200 ]] && path_truncated="$path_truncated..."
+    context+="PATH: $path_truncated\n"
+
+    # Project type detection with file contents
+    if [[ -f "package.json" ]]; then
+        context+="Project: Node.js\n"
+        local pkg_scripts=$(grep -A20 '"scripts"' package.json 2>/dev/null | head -25)
+        [[ -n "$pkg_scripts" ]] && context+="package.json scripts:\n$pkg_scripts\n"
+    fi
+
+    if [[ -f "go.mod" ]]; then
+        context+="Project: Go\n"
+        local go_content=$(head -15 go.mod 2>/dev/null)
+        [[ -n "$go_content" ]] && context+="go.mod:\n$go_content\n"
+    fi
+
+    if [[ -f "Cargo.toml" ]]; then
+        context+="Project: Rust\n"
+        local cargo_content=$(head -20 Cargo.toml 2>/dev/null)
+        [[ -n "$cargo_content" ]] && context+="Cargo.toml:\n$cargo_content\n"
+    fi
+
+    if [[ -f "requirements.txt" ]]; then
+        context+="Project: Python\n"
+        local req_content=$(head -15 requirements.txt 2>/dev/null)
+        [[ -n "$req_content" ]] && context+="requirements.txt:\n$req_content\n"
+    fi
+
+    # README preview
+    if [[ -f "README.md" ]]; then
+        local readme_preview=$(head -20 README.md 2>/dev/null)
+        [[ -n "$readme_preview" ]] && context+="README.md preview:\n$readme_preview\n"
+    fi
+
+    # Git detailed status with diff
     if git rev-parse --git-dir &>/dev/null 2>&1; then
         local branch=$(git symbolic-ref --short HEAD 2>/dev/null)
-        [[ -n "$branch" ]] && context+="Git: $branch\n"
+        [[ -n "$branch" ]] && context+="Git branch: $branch\n"
+
+        # Full git status
+        local git_status=$(git status --short 2>/dev/null | head -30)
+        [[ -n "$git_status" ]] && context+="Git status:\n$git_status\n"
+
+        # Git diff of modified files (limited to 100 lines)
+        local git_diff=$(git diff 2>/dev/null | head -100)
+        [[ -n "$git_diff" ]] && context+="Git diff (first 100 lines):\n$git_diff\n"
     fi
 
     echo "$context"
@@ -69,21 +120,35 @@ _ai_generate() {
     fi
 
     local context=$(_ai_get_context)
-    local prompt="You are a shell command completion assistant. Generate ${AI_NUM_SUGGESTIONS} valid, executable shell commands.
+    local prompt="You are an expert shell command completion assistant with FULL context visibility. Analyze the rich context below and generate ${AI_NUM_SUGGESTIONS} highly relevant, executable commands.
 
-STRICT RULES:
+STRICT OUTPUT RULES:
 - Output ONLY executable shell commands (bash/zsh)
 - ONE command per line
 - NO explanations, NO numbering, NO markdown, NO text
-- Each line must be a complete, valid command
-- Commands should complete or relate to the input
+- Each line must be a complete, valid command that can be executed immediately
 
-Context:
+CONTEXT ANALYSIS STRATEGY:
+You have access to extensive context - USE IT INTELLIGENTLY:
+- Files: ALL files in directory (reference specific files when relevant)
+- Git diff: See EXACT changes to suggest precise git commands
+- Project files: package.json scripts, dependencies, build configs
+- README: Project documentation and usage hints
+- Command history: Recent workflow patterns (last 20 commands)
+- Environment: Full PATH, user, shell environment
+
+SMART SUGGESTIONS:
+- For git commands: analyze the diff and status to suggest specific files/hunks
+- For project commands: use package.json scripts, Makefile targets, cargo commands
+- For file operations: reference actual files that exist
+- For history-based: continue the workflow pattern from recent commands
+
+FULL CONTEXT:
 $context
 
-Input: $prefix
+User input to complete: $prefix
 
-Commands:"
+Generate ${AI_NUM_SUGGESTIONS} most relevant commands:"
 
     local result=$(gemini --model "${GEMINI_MODEL:-gemini-2.0-flash}" -o text "$prompt" 2>&1 | \
         grep -v '^\[' | \
@@ -222,7 +287,7 @@ _ai_show_menu() {
         done
 
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        printf "↑/↓: Navigate  Enter: Select  Q/Esc: Quit  1-${#suggestions[@]}: Direct"
+        printf "↑/↓: Navigate  Enter: Select  Q/Esc: Quit  1-3: Direct"
 
         # Read key silently
         local key=""
@@ -312,20 +377,30 @@ Usage:
   1. Type partial command (3+ chars): git s
   2. Press Ctrl+↓ (or Ctrl+2)
   3. Animated spinner while AI thinks (Ctrl+C to cancel)
-  4. Navigate: ↑/↓ arrows or 1-5 numbers
+  4. Navigate: ↑/↓ arrows or 1-3 numbers
   5. Enter to select, Esc to cancel
 
 Features:
+  • ULTRA-RICH context for maximum relevance
   • Animated spinner during generation
   • Ctrl+C to cancel generation at any time
   • Arrow key navigation (↑/↓)
   • Visual selection (▶ green highlight)
-  • Number shortcuts (1-5)
+  • Number shortcuts (1-3)
   • Full screen compact mode
-  • 5 AI suggestions from Gemini 2.5 Flash Lite
+  • 3 highly contextual AI suggestions from Gemini
+
+Context provided to AI (ultra-enriched):
+  • ALL files in directory (up to 50)
+  • Recent command history (last 20 commands)
+  • Git status + FULL diff (100 lines)
+  • Project files content (package.json scripts, go.mod, Cargo.toml, requirements.txt)
+  • README.md preview (20 lines)
+  • Full environment (USER, SHELL, HOME, PATH)
+  • Project type detection (Node.js, Go, Rust, Python)
 
 Configuration:
-  AI_NUM_SUGGESTIONS=5         # Number of suggestions
+  AI_NUM_SUGGESTIONS=3         # Number of suggestions
   AI_SUGGESTION_MIN_CHARS=3    # Minimum chars
   GEMINI_MODEL=<model>         # Gemini model
 
@@ -340,7 +415,7 @@ Menu navigation:
   ↑/↓        - Navigate suggestions
   Enter      - Select highlighted
   Q or Esc   - Cancel and quit menu
-  1-5        - Direct number selection
+  1-3        - Direct number selection
 
 History navigation (outside menu):
   ↑          - Previous command (prefix search)

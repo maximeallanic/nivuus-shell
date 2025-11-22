@@ -161,14 +161,82 @@ build_prompt() {
 }
 
 # =============================================================================
+# Background Jobs Info (Right Prompt)
+# =============================================================================
+
+background_jobs_info() {
+    # Use ZSH native job tracking (more reliable than jobs command)
+    local running=0
+    local stopped=0
+    local running_names=()
+    local stopped_names=()
+
+    # Iterate over job states
+    for job_id state in ${(kv)jobstates}; do
+        # Parse state: jobstates format is "state:pid=status"
+        # State can be: running, suspended, done
+        local job_state="${state%%:*}"
+
+        case "$job_state" in
+            running)
+                ((running++))
+                # Get job text (command name)
+                local job_text="${jobtexts[$job_id]}"
+                # Truncate to first word (command name)
+                running_names+=(${job_text%% *})
+                ;;
+            suspended)
+                ((stopped++))
+                local job_text="${jobtexts[$job_id]}"
+                stopped_names+=(${job_text%% *})
+                ;;
+        esac
+    done
+
+    local total=$((running + stopped))
+    [[ $total -eq 0 ]] && return
+
+    local output=""
+
+    # If 2 jobs or less, show names
+    if (( total <= 2 )); then
+        if (( running > 0 )); then
+            local names="${(j: :)running_names}"
+            # Truncate if too long
+            [[ ${#names} -gt 20 ]] && names="${names:0:17}..."
+            output+="%{%F{143}%}▶ %{%f%}%{%F{246}%}${names}%{%f%}"
+        fi
+
+        if (( stopped > 0 )); then
+            [[ -n "$output" ]] && output+=" "
+            local names="${(j: :)stopped_names}"
+            [[ ${#names} -gt 20 ]] && names="${names:0:17}..."
+            output+="%{%F{167}%}⏸ %{%f%}%{%F{246}%}${names}%{%f%}"
+        fi
+    else
+        # Show counts
+        if (( running > 0 )); then
+            output+="%{%F{143}%}▶ ${running}%{%f%}"
+        fi
+
+        if (( stopped > 0 )); then
+            [[ -n "$output" ]] && output+=" "
+            output+="%{%F{167}%}⏸ ${stopped}%{%f%}"
+        fi
+    fi
+
+    echo "$output"
+}
+
+# =============================================================================
 # Set Prompt
 # =============================================================================
 
 # Main prompt
 PROMPT=$(build_prompt)
 
-# Right prompt (empty for now, can be customized)
-RPROMPT=''
+# Right prompt with background jobs
+RPROMPT='$(background_jobs_info)'
 
 # Continuation prompt
 PROMPT2="${NORD_PATH}%_>${NORD_RESET} "
