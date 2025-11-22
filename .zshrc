@@ -30,6 +30,8 @@ export ENABLE_PROJECT_DETECTION="${ENABLE_PROJECT_DETECTION:-true}"
 export ENABLE_FIREBASE_PROMPT="${ENABLE_FIREBASE_PROMPT:-true}"
 export ENABLE_AI_SUGGESTIONS="${ENABLE_AI_SUGGESTIONS:-true}"
 export GIT_PROMPT_CACHE_TTL="${GIT_PROMPT_CACHE_TTL:-2}"
+export ENABLE_AI_AUTO_DEBOUNCE="${ENABLE_AI_AUTO_DEBOUNCE:-true}"
+export AI_INLINE_MODE="${AI_INLINE_MODE:-true}"
 
 # =============================================================================
 # Load Configuration Modules

@@ -34,10 +34,10 @@ Explain:
   explain "complex cmd"  - Detailed breakdown
   ask "how to compress"  - General question
 
-AI Suggestions (Real-time):
-  Enable:  export ENABLE_AI_SUGGESTIONS=true
-  ↓ (Down) - Accept AI suggestion
-  Typing   - Suggestion updates after 2s
+AI Suggestions (Interactive):
+  Manual:  Ctrl+↓ or Ctrl+2 - Show AI menu
+  Auto:    export ENABLE_AI_AUTO_DEBOUNCE=true
+  Delay:   Menu appears after 2s of inactivity
   Help:    ai_suggestions_help
 
 Configuration:

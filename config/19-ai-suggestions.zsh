@@ -10,10 +10,8 @@ export NIVUUS_AI_SUGGESTIONS_LOADED=1
 # Skip if explicitly disabled
 [[ "${ENABLE_AI_SUGGESTIONS:-true}" != "true" ]] && return
 
-# Check if gemini is available
-if ! command -v gemini &>/dev/null; then
-    return
-fi
+# Don't check for gemini at load time (NVM loads lazily)
+# We'll check at execution time instead
 
 # =============================================================================
 # Configuration
@@ -21,10 +19,19 @@ fi
 
 typeset -g AI_SUGGESTION_MIN_CHARS="${AI_SUGGESTION_MIN_CHARS:-3}"
 typeset -g AI_NUM_SUGGESTIONS="${AI_NUM_SUGGESTIONS:-3}"
+typeset -g AI_DEBOUNCE_DELAY="${AI_DEBOUNCE_DELAY:-2}"  # Debounce delay in seconds
+typeset -g ENABLE_AI_AUTO_DEBOUNCE="${ENABLE_AI_AUTO_DEBOUNCE:-false}"  # Auto-trigger after typing
+typeset -g AI_INLINE_MODE="${AI_INLINE_MODE:-true}"  # Show inline suggestion instead of menu
 
 # Cache
 typeset -gA _AI_CACHE
 typeset -gA _AI_CACHE_TIME
+
+# Current inline suggestion
+typeset -g _AI_CURRENT_SUGGESTION=""
+
+# Animation state
+typeset -g _AI_ANIMATION_DOTS=1
 
 # =============================================================================
 # Context Collection
@@ -110,6 +117,26 @@ _ai_generate() {
     local prefix="$1"
     local cache_key="${prefix}_${PWD}"
 
+    # Find gemini at execution time (in case NVM loaded after module load)
+    local gemini_cmd
+    if command -v gemini &>/dev/null; then
+        gemini_cmd="$(command -v gemini)"
+    else
+        # Try common NVM paths
+        for nvm_path in ~/.nvm/versions/node/*/bin/gemini; do
+            if [[ -x "$nvm_path" ]]; then
+                gemini_cmd="$nvm_path"
+                break
+            fi
+        done
+    fi
+
+    # No gemini found
+    if [[ -z "$gemini_cmd" ]]; then
+        echo "ERROR: gemini not found" >&2
+        return 1
+    fi
+
     # Check cache (5min TTL)
     if [[ -n "${_AI_CACHE_TIME[$cache_key]}" ]]; then
         local age=$(( EPOCHSECONDS - _AI_CACHE_TIME[$cache_key] ))
@@ -119,14 +146,26 @@ _ai_generate() {
         fi
     fi
 
-    local context=$(_ai_get_context)
-    local prompt="You are an expert shell command completion assistant with FULL context visibility. Analyze the rich context below and generate ${AI_NUM_SUGGESTIONS} highly relevant, executable commands.
+    # For inline mode, only generate 1 suggestion for speed
+    local num_suggestions=${AI_NUM_SUGGESTIONS}
+    if [[ "${AI_INLINE_MODE}" == "true" ]]; then
+        num_suggestions=1
+    fi
 
-STRICT OUTPUT RULES:
-- Output ONLY executable shell commands (bash/zsh)
+    local context=$(_ai_get_context)
+    local prompt="You are an expert shell command completion assistant with FULL context visibility. Analyze the rich context below and generate ${num_suggestions} highly relevant, executable commands.
+
+CRITICAL OUTPUT RULES - FOLLOW EXACTLY:
+- Output ONLY raw executable shell commands (bash/zsh)
 - ONE command per line
-- NO explanations, NO numbering, NO markdown, NO text
-- Each line must be a complete, valid command that can be executed immediately
+- NO markdown code blocks (no \`\`\`), NO backticks, NO formatting
+- NO explanations, NO numbering, NO bullets, NO prefixes
+- NO text before or after commands
+- Each line must be a raw command that can be copy-pasted to terminal
+- Example correct output:
+  git status
+  ls -lah
+  cd /tmp
 
 CONTEXT ANALYSIS STRATEGY:
 You have access to extensive context - USE IT INTELLIGENTLY:
@@ -148,17 +187,21 @@ $context
 
 User input to complete: $prefix
 
-Generate ${AI_NUM_SUGGESTIONS} most relevant commands:"
+Generate ${num_suggestions} most relevant commands:"
 
-    local result=$(gemini --model "${GEMINI_MODEL:-gemini-2.0-flash}" -o text "$prompt" 2>&1 | \
+    local result=$("$gemini_cmd" --model "${GEMINI_MODEL:-gemini-2.0-flash}" -o text "$prompt" 2>&1 | \
         grep -v '^\[' | \
         grep -v '^Loaded' | \
         grep -v '^Cached' | \
+        grep -v '^```' | \
         sed 's/^[0-9]*\.\s*//' | \
         sed 's/^-\s*//' | \
-        grep -E '^[a-zA-Z0-9_/\.\-]' | \
-        grep -v -iE '^(translate|generate|output|here|the|this|that|rules|commands|input)' | \
-        head -${AI_NUM_SUGGESTIONS})
+        sed 's/^[\*]\s*//' | \
+        sed 's/^`\(.*\)`$/\1/' | \
+        grep -v '^[[:space:]]*$' | \
+        grep -v -iE '^(explanation|example|correct|output|translate|generate|here|the|this|that|rules|commands|input):' | \
+        grep -E '^[a-zA-Z0-9_/\.\-\$\{\}]' | \
+        head -${num_suggestions})
 
     if [[ -n "$result" ]]; then
         _AI_CACHE[$cache_key]="$result"
@@ -187,11 +230,127 @@ _ai_spinner() {
 }
 
 # =============================================================================
+# Loading Animation
+# =============================================================================
+
+_ai_animate_dots() {
+    # Cycle through 1, 2, 3 dots
+    (( _AI_ANIMATION_DOTS = (_AI_ANIMATION_DOTS % 3) + 1 ))
+}
+
+_ai_cancel_animation() {
+    # Cancel all scheduled animation jobs
+    local -a job_ids
+    local line job_num
+
+    while IFS= read -r line; do
+        if [[ "$line" == *"_ai_animate_dots"* ]]; then
+            job_num=$(echo "$line" | awk '{print $1}')
+            if [[ -n "$job_num" ]]; then
+                job_ids+=($job_num)
+            fi
+        fi
+    done < <(sched 2>/dev/null)
+
+    for job_num in $job_ids; do
+        sched -$job_num 2>/dev/null
+    done
+}
+
+# =============================================================================
+# Inline Suggestion Display
+# =============================================================================
+
+_ai_show_inline() {
+    local prefix="$BUFFER"
+
+    # Cancel any pending debounce timer and animation
+    _ai_cancel_debounce
+    _ai_cancel_animation
+
+    # Min chars check
+    if [[ ${#prefix} -lt $AI_SUGGESTION_MIN_CHARS ]]; then
+        return
+    fi
+
+    # Calculate padding for alignment
+    local clean_prompt=$(print -Pn "$PROMPT" | sed $'s/\e\\[[0-9;]*m//g')
+    local prompt_length=${#clean_prompt}
+    local padding_length=$((prompt_length - 3))
+    [[ $padding_length -lt 0 ]] && padding_length=0
+    local padding=$(printf ' %.0s' {1..$padding_length})
+
+    # Reset animation
+    _AI_ANIMATION_DOTS=1
+
+    # Generate in background to allow animation
+    local temp_file=$(mktemp)
+    {
+        _ai_generate "$prefix" 2>&1 | head -1 > "$temp_file"
+    } &!
+    local generate_pid=$!
+
+    # Animate while generating
+    while kill -0 $generate_pid 2>/dev/null; do
+        # Build dots string
+        local dots=$(printf '.%.0s' $(seq 1 $_AI_ANIMATION_DOTS))
+        zle -M "${padding}🤖 Generating AI suggestion${dots}"
+        zle -R
+
+        # Update animation state
+        _ai_animate_dots
+
+        # Wait before next frame
+        sleep 0.4
+    done
+
+    # Get result
+    wait $generate_pid 2>/dev/null
+    local suggestion=$(cat "$temp_file")
+    rm -f "$temp_file"
+
+    # Check for errors
+    if [[ "$suggestion" == ERROR:* ]]; then
+        suggestion=""
+    fi
+
+    # Store suggestion
+    _AI_CURRENT_SUGGESTION="$suggestion"
+
+    # Display result
+    if [[ -n "$suggestion" ]]; then
+        zle -M "${padding}🤖 $suggestion (Ctrl+↓ to accept)"
+        zle -R
+    else
+        zle -M ""
+        zle -R
+    fi
+}
+
+_ai_accept_inline() {
+    # Accept the AI suggestion if present
+    if [[ -n "$_AI_CURRENT_SUGGESTION" ]]; then
+        BUFFER="$_AI_CURRENT_SUGGESTION"
+        CURSOR=${#BUFFER}
+        _AI_CURRENT_SUGGESTION=""
+        zle -M ""
+    fi
+}
+
+_ai_clear_inline() {
+    _AI_CURRENT_SUGGESTION=""
+    zle -M ""
+}
+
+# =============================================================================
 # Compact Interactive Menu
 # =============================================================================
 
 _ai_show_menu() {
     local prefix="$BUFFER"
+
+    # Cancel any pending debounce timer immediately
+    _ai_cancel_debounce
 
     # Min chars check
     if [[ ${#prefix} -lt $AI_SUGGESTION_MIN_CHARS ]]; then
@@ -351,15 +510,110 @@ _ai_show_menu() {
 }
 
 # =============================================================================
+# Debounce System (using zsh/sched)
+# =============================================================================
+
+# Load scheduling module
+zmodload zsh/sched 2>/dev/null
+
+_ai_cancel_debounce() {
+    # Get list of scheduled jobs and their IDs
+    local -a job_ids
+    local line job_num
+
+    # Parse sched output to find our trigger jobs
+    while IFS= read -r line; do
+        if [[ "$line" == *"_ai_debounce_trigger"* ]]; then
+            # Extract job number (first field, strip leading spaces)
+            job_num=$(echo "$line" | awk '{print $1}')
+            if [[ -n "$job_num" ]]; then
+                job_ids+=($job_num)
+            fi
+        fi
+    done < <(sched 2>/dev/null)
+
+    # Cancel all found jobs
+    for job_num in $job_ids; do
+        sched -$job_num 2>/dev/null
+    done
+}
+
+_ai_debounce_trigger() {
+    # This runs after the debounce delay (scheduled via sched)
+    # Call inline or menu widget based on mode
+    if [[ "${AI_INLINE_MODE}" == "true" ]]; then
+        zle && zle ai-show-inline
+    else
+        zle && zle ai-show-menu
+    fi
+}
+
+_ai_start_debounce() {
+    # Skip if auto-debounce is disabled
+    [[ "${ENABLE_AI_AUTO_DEBOUNCE}" != "true" ]] && return
+
+    # Skip if buffer is too short
+    [[ ${#BUFFER} -lt $AI_SUGGESTION_MIN_CHARS ]] && return
+
+    # Cancel any existing debounce timer
+    _ai_cancel_debounce
+
+    # Schedule the trigger function
+    sched "+${AI_DEBOUNCE_DELAY}" _ai_debounce_trigger
+}
+
+# Hook into self-insert to trigger debounce on typing
+_ai_debounce_self_insert() {
+    # Clear any existing inline suggestion
+    _AI_CURRENT_SUGGESTION=""
+    zle -M ""
+
+    zle .self-insert
+    _ai_start_debounce
+}
+
+# Cancel debounce on accept-line (Enter)
+_ai_debounce_accept_line() {
+    _ai_cancel_debounce
+    zle .accept-line
+}
+
+# Cancel debounce on send-break (Ctrl+C)
+_ai_debounce_send_break() {
+    _ai_cancel_debounce
+    zle .send-break
+}
+
+# Cancel debounce on clear-screen (Ctrl+L)
+_ai_debounce_clear_screen() {
+    _ai_cancel_debounce
+    zle .clear-screen
+}
+
+# =============================================================================
 # Widget and Keybinding
 # =============================================================================
 
-# Register widget
+# Register widgets
 zle -N ai-show-menu _ai_show_menu
+zle -N ai-show-inline _ai_show_inline
+zle -N ai-accept-inline _ai_accept_inline
+zle -N ai-clear-inline _ai_clear_inline
 
-# Bind multiple variants
-bindkey '^[[1;5B' ai-show-menu     # Ctrl+Down (PRIMARY - most intuitive)
-bindkey '^2' ai-show-menu          # Ctrl+2 (fallback)
+# Register debounce widgets (only if auto-debounce is enabled)
+if [[ "${ENABLE_AI_AUTO_DEBOUNCE}" == "true" ]]; then
+    zle -N self-insert _ai_debounce_self_insert
+    zle -N accept-line _ai_debounce_accept_line
+    zle -N send-break _ai_debounce_send_break
+    zle -N clear-screen _ai_debounce_clear_screen
+fi
+
+# Bind for inline mode
+bindkey '^[[1;5B' ai-accept-inline  # Ctrl+Down - Accept AI suggestion
+bindkey '^[[Z' ai-clear-inline      # Shift+Tab - Clear suggestion
+
+# Bind multiple variants for manual triggering (menu mode)
+bindkey '^2' ai-show-menu          # Ctrl+2
 bindkey '^[[13;5~' ai-show-menu    # Ctrl+Enter
 bindkey '^[^M' ai-show-menu        # Ctrl+Enter (alt)
 bindkey '^ ' ai-show-menu          # Ctrl+Space
@@ -371,14 +625,30 @@ bindkey '^@' ai-show-menu          # Ctrl+Space (alt)
 
 ai_suggestions_help() {
     cat <<'EOF'
-AI Command Suggestions - Compact Interactive Menu
+AI Command Suggestions - Inline & Interactive Modes
 
-Usage:
+Mode 1: Inline (Default with Auto-Debounce)
+  Enable: export ENABLE_AI_AUTO_DEBOUNCE=true
+          export AI_INLINE_MODE=true
   1. Type partial command (3+ chars): git s
-  2. Press Ctrl+↓ (or Ctrl+2)
-  3. Animated spinner while AI thinks (Ctrl+C to cancel)
-  4. Navigate: ↑/↓ arrows or 1-3 numbers
-  5. Enter to select, Esc to cancel
+  2. Wait 2 seconds (debounce delay)
+  3. Suggestion appears at bottom: "🤖 git status (Ctrl+↓ to accept)"
+  4. Press Ctrl+↓ to accept suggestion
+  5. Continue typing to clear and reset timer
+
+Mode 2: Interactive Menu (Manual)
+  Trigger: Ctrl+↓ (or Ctrl+2)
+  1. Type partial command (3+ chars): git s
+  2. Press Ctrl+↓
+  3. Navigate: ↑/↓ arrows or 1-3 numbers
+  4. Enter to select, Esc to cancel
+
+Mode 3: Interactive Menu (Auto-Debounce)
+  Enable: export ENABLE_AI_AUTO_DEBOUNCE=true
+          export AI_INLINE_MODE=false
+  1. Type partial command (3+ chars): git s
+  2. Wait 2 seconds
+  3. Full menu appears automatically
 
 Features:
   • ULTRA-RICH context for maximum relevance
@@ -400,13 +670,18 @@ Context provided to AI (ultra-enriched):
   • Project type detection (Node.js, Go, Rust, Python)
 
 Configuration:
-  AI_NUM_SUGGESTIONS=3         # Number of suggestions
-  AI_SUGGESTION_MIN_CHARS=3    # Minimum chars
-  GEMINI_MODEL=<model>         # Gemini model
+  AI_NUM_SUGGESTIONS=3            # Number of suggestions
+  AI_SUGGESTION_MIN_CHARS=3       # Minimum chars
+  AI_DEBOUNCE_DELAY=2             # Debounce delay in seconds
+  ENABLE_AI_AUTO_DEBOUNCE=false   # Auto-trigger after typing
+  AI_INLINE_MODE=true             # Show inline (true) or menu (false)
+  GEMINI_MODEL=<model>            # Gemini model
 
 Keybindings:
-  Ctrl+↓     - Show AI menu (PRIMARY - most intuitive!)
-  Ctrl+2     - Alternative (works everywhere)
+  Ctrl+↓     - Accept inline AI suggestion
+  Shift+Tab  - Clear inline AI suggestion
+  Ctrl+2     - Show AI menu manually
+  Ctrl+Space - Show AI menu manually
 
 During generation:
   Ctrl+C     - Cancel generation and return to prompt
