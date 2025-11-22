@@ -1,0 +1,28 @@
+{
+  "name": "nivuus-shell",
+  "version": "2.0.0",
+  "description": "Modern ZSH configuration framework with Nord theme and AI integration",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maximeallanic/nivuus-shell.git"
+  },
+  "scripts": {
+    "test": "./bin/test",
+    "test:unit": "./bin/test --unit",
+    "test:integration": "./bin/test --integration",
+    "test:performance": "./bin/test --performance",
+    "test:e2e": "./bin/test --e2e",
+    "test:watch": "./bin/test-watch",
+    "test:coverage": "./bin/test --coverage"
+  },
+  "keywords": [
+    "zsh",
+    "shell",
+    "nord",
+    "theme",
+    "ai",
+    "productivity"
+  ],
+  "author": "Maxime Allanic",
+  "license": "MIT"
+}
