@@ -33,21 +33,21 @@ for ((i=1; i<=runs; i++)); do
     temp_file=$(mktemp)
     cat > "$temp_file" << 'EOF'
 #!/usr/bin/env zsh
+zmodload zsh/datetime
 start=$EPOCHREALTIME
 source "$HOME/.zshrc"
 end=$EPOCHREALTIME
-duration=$(( ($end - $start) * 1000 ))
-echo "$duration"
+printf "%.2f" $(( ($end - $start) * 1000 ))
 EOF
 
     load_time=$(zsh "$temp_file" 2>/dev/null)
     rm -f "$temp_file"
 
-    total=$(echo "$total + $load_time" | bc)
+    total=$(awk "BEGIN {print $total + $load_time}")
     echo "  Run $i: ${load_time}ms"
 done
 
-average=$(echo "scale=2; $total / $runs" | bc)
+average=$(awk "BEGIN {printf \"%.2f\", $total / $runs}")
 echo ""
 echo "Average: ${average}ms"
 
@@ -77,12 +77,12 @@ if [[ -d "$NIVUUS_DIR/config" ]]; then
         temp_file=$(mktemp)
         cat > "$temp_file" << EOF
 #!/usr/bin/env zsh
+zmodload zsh/datetime
 export NIVUUS_SHELL_DIR="$NIVUUS_DIR"
 start=\$EPOCHREALTIME
 source "$config_file"
 end=\$EPOCHREALTIME
-duration=\$(( (\$end - \$start) * 1000 ))
-echo "\$duration"
+printf "%.2f" \$(( (\$end - \$start) * 1000 ))
 EOF
 
         module_time=$(zsh "$temp_file" 2>/dev/null || echo "0")
@@ -102,30 +102,43 @@ echo ""
 echo -e "${BLUE}Command Execution Speed${NC}"
 echo "─────────────────────────────────────────────"
 
-# Test simple command
+# Test simple commands in ZSH context
+temp_file=$(mktemp)
+cat > "$temp_file" << 'EOF'
+#!/usr/bin/env zsh
+zmodload zsh/datetime
+
 test_command() {
     local cmd="$1"
     local runs=10
-
     local total=0
+
     for ((i=1; i<=runs; i++)); do
         start=$EPOCHREALTIME
         eval "$cmd" &>/dev/null
         end=$EPOCHREALTIME
         duration=$(( ($end - $start) * 1000 ))
-        total=$(echo "$total + $duration" | bc)
+        total=$(awk "BEGIN {print $total + $duration}")
     done
 
-    average=$(echo "scale=2; $total / $runs" | bc)
+    average=$(awk "BEGIN {printf \"%.2f\", $total / $runs}")
     printf "  %-30s %6.2fms\n" "$cmd" "$average"
 }
 
-source "$HOME/.zshrc" &>/dev/null
-
 test_command "ls"
-test_command "git status" 2>/dev/null || echo "  git status - not in repo"
 test_command "echo test"
 test_command "pwd"
+
+# Git status only if in repo
+if git rev-parse --git-dir &>/dev/null; then
+    test_command "git status"
+else
+    echo "  git status                     (not in repo)"
+fi
+EOF
+
+zsh "$temp_file" 2>/dev/null
+rm -f "$temp_file"
 echo ""
 
 # =============================================================================
@@ -138,6 +151,7 @@ echo "────────────────────────�
 temp_file=$(mktemp)
 cat > "$temp_file" << 'EOF'
 #!/usr/bin/env zsh
+zmodload zsh/datetime
 source "$HOME/.zshrc" &>/dev/null
 
 runs=20
@@ -148,11 +162,10 @@ for ((i=1; i<=runs; i++)); do
     prompt_test=$PROMPT
     end=$EPOCHREALTIME
     duration=$(( ($end - $start) * 1000 ))
-    total=$(echo "$total + $duration" | bc)
+    total=$(awk "BEGIN {print $total + $duration}")
 done
 
-average=$(echo "scale=2; $total / $runs" | bc)
-echo "$average"
+awk "BEGIN {printf \"%.2f\", $total / $runs}"
 EOF
 
 prompt_time=$(zsh "$temp_file" 2>/dev/null)
