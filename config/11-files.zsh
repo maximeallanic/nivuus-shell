@@ -25,8 +25,13 @@ fi
 # File Search
 # =============================================================================
 
+# Create fd alias for fdfind (Debian/Ubuntu compatibility)
+if ! command -v fd &>/dev/null && command -v fdfind &>/dev/null; then
+    alias fd='fdfind'
+fi
+
 # Fast file find (prefer fd if available, otherwise use find)
-if command -v fd &>/dev/null; then
+if command -v fd &>/dev/null || command -v fdfind &>/dev/null; then
     alias f='fd'
 else
     alias f='find . -iname'
@@ -125,8 +130,17 @@ _suggest_modern_tools() {
     local suggestions=()
 
     command -v eza &>/dev/null || suggestions+=("eza (modern ls): cargo install eza")
-    command -v bat &>/dev/null || suggestions+=("bat (better cat): cargo install bat")
-    command -v fd &>/dev/null || suggestions+=("fd (fast find): cargo install fd-find")
+
+    # Check for bat or batcat (Debian/Ubuntu uses batcat)
+    if ! command -v bat &>/dev/null && ! command -v batcat &>/dev/null; then
+        suggestions+=("bat (better cat): cargo install bat")
+    fi
+
+    # Check for fd or fdfind (Debian/Ubuntu uses fdfind)
+    if ! command -v fd &>/dev/null && ! command -v fdfind &>/dev/null; then
+        suggestions+=("fd (fast find): cargo install fd-find")
+    fi
+
     command -v rg &>/dev/null || suggestions+=("rg (ripgrep): cargo install ripgrep")
 
     if [[ ${#suggestions[@]} -gt 0 ]]; then
