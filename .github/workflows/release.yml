@@ -3,10 +3,15 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version number (e.g., 2.1.0)'
+      bump_type:
+        description: 'Version bump type'
         required: true
-        type: string
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
 
 jobs:
   # First, run all tests to ensure quality
@@ -76,36 +81,62 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for changelog generation
 
-      - name: Validate version format
+      - name: Calculate new version
+        id: version
         run: |
-          if ! echo "${{ inputs.version }}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "❌ Invalid version format. Expected: X.Y.Z (e.g., 2.1.0)"
-            exit 1
-          fi
-          echo "✅ Version format valid: ${{ inputs.version }}"
+          # Read current version from package.json
+          CURRENT_VERSION=$(grep '"version"' package.json | sed 's/.*"version": "\(.*\)".*/\1/')
+          echo "Current version: $CURRENT_VERSION"
+
+          # Split version into parts
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          # Increment based on bump type
+          case "${{ inputs.bump_type }}" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          # Create new version
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+
+          # Export for other steps
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
       - name: Check if tag already exists
         run: |
-          if git rev-parse "v${{ inputs.version }}" >/dev/null 2>&1; then
-            echo "❌ Tag v${{ inputs.version }} already exists!"
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "❌ Tag v${{ steps.version.outputs.version }} already exists!"
             exit 1
           fi
-          echo "✅ Tag v${{ inputs.version }} is available"
+          echo "✅ Tag v${{ steps.version.outputs.version }} is available"
 
       - name: Update version in package.json
         run: |
           # Update package.json version
-          sed -i 's/"version": ".*"/"version": "${{ inputs.version }}"/' package.json
+          sed -i 's/"version": ".*"/"version": "${{ steps.version.outputs.version }}"/' package.json
 
-          echo "✅ Updated package.json to version ${{ inputs.version }}"
+          echo "✅ Updated package.json to version ${{ steps.version.outputs.version }}"
           grep '"version"' package.json
 
       - name: Update version in install.sh
         run: |
           # Update install.sh VERSION variable
-          sed -i 's/^VERSION=.*/VERSION="${{ inputs.version }}"/' install.sh
+          sed -i 's/^VERSION=.*/VERSION="${{ steps.version.outputs.version }}"/' install.sh
 
-          echo "✅ Updated install.sh to version ${{ inputs.version }}"
+          echo "✅ Updated install.sh to version ${{ steps.version.outputs.version }}"
           grep '^VERSION=' install.sh
 
       - name: Generate changelog
@@ -131,7 +162,7 @@ jobs:
           ## Installation
 
           \`\`\`bash
-          curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/v${{ inputs.version }}/install.sh | bash
+          curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/v${{ steps.version.outputs.version }}/install.sh | bash
           \`\`\`
 
           Or download the release archive and extract it manually.
@@ -144,7 +175,7 @@ jobs:
           nivuus-update
           \`\`\`
 
-          **Full Changelog**: https://github.com/maximeallanic/nivuus-shell/compare/${PREVIOUS_TAG}...v${{ inputs.version }}
+          **Full Changelog**: https://github.com/maximeallanic/nivuus-shell/compare/${PREVIOUS_TAG}...v${{ steps.version.outputs.version }}
           EOF
 
           echo "✅ Generated changelog"
@@ -160,7 +191,7 @@ jobs:
               --exclude='release-assets' \
               --exclude='*.zwc' \
               --exclude='.github' \
-              -czf release-assets/nivuus-shell-v${{ inputs.version }}.tar.gz \
+              -czf release-assets/nivuus-shell-v${{ steps.version.outputs.version }}.tar.gz \
               .
 
           echo "✅ Created release archive"
@@ -175,7 +206,7 @@ jobs:
 
           # Create docs archive
           cd release-assets
-          tar -czf nivuus-shell-docs-v${{ inputs.version }}.tar.gz docs/
+          tar -czf nivuus-shell-docs-v${{ steps.version.outputs.version }}.tar.gz docs/
           rm -rf docs/
 
           echo "✅ Created documentation archive"
@@ -195,16 +226,16 @@ jobs:
           git config --local user.name "github-actions[bot]"
 
           git add package.json install.sh
-          git commit -m "chore: bump version to ${{ inputs.version }}"
+          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
 
           echo "✅ Committed version updates"
 
       - name: Create and push tag
         run: |
-          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
-          git push origin "v${{ inputs.version }}"
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
 
-          echo "✅ Created and pushed tag v${{ inputs.version }}"
+          echo "✅ Created and pushed tag v${{ steps.version.outputs.version }}"
 
       - name: Push version updates to master
         run: |
@@ -215,16 +246,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v${{ inputs.version }}" \
-            --title "Nivuus Shell v${{ inputs.version }}" \
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --title "Nivuus Shell v${{ steps.version.outputs.version }}" \
             --notes-file RELEASE_NOTES.md \
             release-assets/*
 
-          echo "✅ Created GitHub Release v${{ inputs.version }}"
+          echo "✅ Created GitHub Release v${{ steps.version.outputs.version }}"
 
       - name: Release Summary
         run: |
-          echo "## 🎉 Release v${{ inputs.version }} Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎉 Release v${{ steps.version.outputs.version }} Created Successfully!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📦 Release Assets" >> $GITHUB_STEP_SUMMARY
           echo "- Source archive (tar.gz)" >> $GITHUB_STEP_SUMMARY
@@ -232,8 +263,8 @@ jobs:
           echo "- SHA256 checksums" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
-          echo "- [View Release](https://github.com/maximeallanic/nivuus-shell/releases/tag/v${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY
-          echo "- [Download Archive](https://github.com/maximeallanic/nivuus-shell/archive/refs/tags/v${{ inputs.version }}.tar.gz)" >> $GITHUB_STEP_SUMMARY
+          echo "- [View Release](https://github.com/maximeallanic/nivuus-shell/releases/tag/v${{ steps.version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Download Archive](https://github.com/maximeallanic/nivuus-shell/archive/refs/tags/v${{ steps.version.outputs.version }}.tar.gz)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📋 Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "1. Verify the release on GitHub" >> $GITHUB_STEP_SUMMARY
