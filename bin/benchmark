@@ -7,6 +7,11 @@
 
 set -e
 
+# Detect shell configuration file
+NIVUUS_DIR="${NIVUUS_SHELL_DIR:-$HOME/.nivuus-shell}"
+ZSHRC_FILE="${NIVUUS_SHELL_DIR:+$NIVUUS_SHELL_DIR/.zshrc}"
+ZSHRC_FILE="${ZSHRC_FILE:-$HOME/.zshrc}"
+
 # Colors
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
@@ -31,13 +36,13 @@ total=0
 
 for ((i=1; i<=runs; i++)); do
     temp_file=$(mktemp)
-    cat > "$temp_file" << 'EOF'
+    cat > "$temp_file" << EOF
 #!/usr/bin/env zsh
 zmodload zsh/datetime
-start=$EPOCHREALTIME
-source "$HOME/.zshrc"
-end=$EPOCHREALTIME
-printf "%.2f" $(( ($end - $start) * 1000 ))
+start=\$EPOCHREALTIME
+source "$ZSHRC_FILE"
+end=\$EPOCHREALTIME
+printf "%.2f" \$(( (\$end - \$start) * 1000 ))
 EOF
 
     load_time=$(zsh "$temp_file" 2>/dev/null)
@@ -67,8 +72,6 @@ echo ""
 
 echo -e "${BLUE}Individual Module Load Times${NC}"
 echo "─────────────────────────────────────────────"
-
-NIVUUS_DIR="${NIVUUS_SHELL_DIR:-$HOME/.nivuus-shell}"
 
 if [[ -d "$NIVUUS_DIR/config" ]]; then
     for config_file in "$NIVUUS_DIR"/config/*.zsh; do
@@ -149,23 +152,23 @@ echo -e "${BLUE}Prompt Generation Speed${NC}"
 echo "─────────────────────────────────────────────"
 
 temp_file=$(mktemp)
-cat > "$temp_file" << 'EOF'
+cat > "$temp_file" << EOF
 #!/usr/bin/env zsh
 zmodload zsh/datetime
-source "$HOME/.zshrc" &>/dev/null
+source "$ZSHRC_FILE" &>/dev/null
 
 runs=20
 total=0
 
 for ((i=1; i<=runs; i++)); do
-    start=$EPOCHREALTIME
-    prompt_test=$PROMPT
-    end=$EPOCHREALTIME
-    duration=$(( ($end - $start) * 1000 ))
-    total=$(awk "BEGIN {print $total + $duration}")
+    start=\$EPOCHREALTIME
+    prompt_test=\$PROMPT
+    end=\$EPOCHREALTIME
+    duration=\$(( (\$end - \$start) * 1000 ))
+    total=\$(awk "BEGIN {print \$total + \$duration}")
 done
 
-awk "BEGIN {printf \"%.2f\", $total / $runs}"
+awk "BEGIN {printf \"%.2f\", \$total / \$runs}"
 EOF
 
 prompt_time=$(zsh "$temp_file" 2>/dev/null)
@@ -220,9 +223,9 @@ compiled=0
 total_files=0
 
 # Check .zshrc
-if [[ -f "$HOME/.zshrc" ]]; then
+if [[ -f "$ZSHRC_FILE" ]]; then
     total_files=$((total_files + 1))
-    [[ -f "$HOME/.zshrc.zwc" ]] && compiled=$((compiled + 1))
+    [[ -f "$ZSHRC_FILE.zwc" ]] && compiled=$((compiled + 1))
 fi
 
 # Check config files

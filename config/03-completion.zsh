@@ -9,9 +9,6 @@ typeset -g ZCOMPDUMP="$HOME/.zcompdump"
 
 # Lazy load compinit on first completion attempt
 _nivuus_lazy_compinit() {
-    # Remove this temporary function
-    unfunction _nivuus_lazy_compinit
-
     # Load completion system
     autoload -Uz compinit
 
@@ -29,6 +26,13 @@ _nivuus_lazy_compinit() {
 
     # Apply completion styling
     _nivuus_setup_completion_styles
+
+    # Rebind TAB to the real completion widget
+    # This prevents issues when this function is wrapped by syntax-highlighting
+    bindkey '^I' expand-or-complete
+
+    # Remove this temporary function (safe now that TAB is rebound)
+    unfunction _nivuus_lazy_compinit
 
     # Trigger the completion that was originally requested
     zle expand-or-complete

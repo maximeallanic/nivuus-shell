@@ -29,9 +29,16 @@ export ENABLE_SYNTAX_HIGHLIGHTING="${ENABLE_SYNTAX_HIGHLIGHTING:-true}"
 export ENABLE_PROJECT_DETECTION="${ENABLE_PROJECT_DETECTION:-true}"
 export ENABLE_FIREBASE_PROMPT="${ENABLE_FIREBASE_PROMPT:-true}"
 export ENABLE_AI_SUGGESTIONS="${ENABLE_AI_SUGGESTIONS:-true}"
+export ENABLE_AI_TERMINAL_TITLES="${ENABLE_AI_TERMINAL_TITLES:-true}"
 export GIT_PROMPT_CACHE_TTL="${GIT_PROMPT_CACHE_TTL:-2}"
 export ENABLE_AI_AUTO_DEBOUNCE="${ENABLE_AI_AUTO_DEBOUNCE:-true}"
 export AI_INLINE_MODE="${AI_INLINE_MODE:-true}"
+
+# =============================================================================
+# User Local Configuration (load BEFORE modules for environment variables)
+# =============================================================================
+
+[[ -f "$HOME/.zsh_local" ]] && source "$HOME/.zsh_local"
 
 # =============================================================================
 # Load Configuration Modules
@@ -56,13 +63,14 @@ config_files=(
     13-system.zsh
     14-functions.zsh
     15-aliases.zsh
-    16-syntax.zsh
     17-colorization.zsh
     18-autosuggestions.zsh
     19-ai-suggestions.zsh
     20-autoupdate.zsh
     20-terminal-title.zsh
     21-safety.zsh
+    22-ai-errors.zsh
+    98-syntax.zsh
     99-cleanup.zsh
 )
 
@@ -70,12 +78,6 @@ for config_file in $config_files; do
     config_path="$NIVUUS_SHELL_DIR/config/$config_file"
     [[ -f "$config_path" ]] && source "$config_path"
 done
-
-# =============================================================================
-# User Local Configuration
-# =============================================================================
-
-[[ -f "$HOME/.zsh_local" ]] && source "$HOME/.zsh_local"
 
 # =============================================================================
 # Performance Report

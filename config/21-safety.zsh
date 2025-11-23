@@ -84,19 +84,28 @@ _nivuus_safety_check() {
 
         if [[ "$cmd" =~ "$expanded_pattern" ]]; then
             # Critical warning - requires explicit confirmation
-            echo ""
-            echo "⚠️  ${NORD_ERROR}DANGER:${NORD_RESET} $danger_msg"
-            echo "Command: ${NORD_PATH}$cmd${NORD_RESET}"
-            echo ""
-            echo -n "Type 'yes' to continue or anything else to cancel: "
+            print ""
+            print -P "⚠️  ${NORD_ERROR}DANGER:${NORD_RESET} $danger_msg"
+            print -P "Command: ${NORD_PATH}$cmd${NORD_RESET}"
+            print ""
+            print -n "Type 'yes' to continue or Ctrl+C to cancel: "
             read -r response
 
             if [[ "$response" != "yes" ]]; then
-                echo "${NORD_SUCCESS}✓ Command cancelled${NORD_RESET}"
-                return 1
+                print ""
+                print -P "${NORD_ERROR}You must type 'yes' to proceed or press Ctrl+C to cancel.${NORD_RESET}"
+                print -n "Type 'yes' to continue or Ctrl+C to cancel: "
+                read -r response
+
+                if [[ "$response" != "yes" ]]; then
+                    print ""
+                    print -P "${NORD_ERROR}Invalid response. Press Ctrl+C now to cancel!${NORD_RESET}"
+                    sleep 2
+                    return 1
+                fi
             fi
 
-            echo "${NORD_ERROR}⚠ Proceeding with dangerous command...${NORD_RESET}"
+            print -P "${NORD_ERROR}⚠ Proceeding with dangerous command...${NORD_RESET}"
             return 0
         fi
     done
@@ -105,10 +114,10 @@ _nivuus_safety_check() {
     for pattern warning_msg in ${(kv)WARNING_PATTERNS}; do
         if [[ "$cmd" =~ "$pattern" ]]; then
             # Warning - show but allow to proceed
-            echo ""
-            echo "⚠️  ${NORD_FIREBASE}WARNING:${NORD_RESET} $warning_msg"
-            echo "Command: ${NORD_PATH}$cmd${NORD_RESET}"
-            echo -n "Press Enter to continue or Ctrl+C to cancel... "
+            print ""
+            print -P "⚠️  ${NORD_FIREBASE}WARNING:${NORD_RESET} $warning_msg"
+            print -P "Command: ${NORD_PATH}$cmd${NORD_RESET}"
+            print -n "Press Enter to continue or Ctrl+C to cancel... "
             read -r
 
             return 0
@@ -126,15 +135,11 @@ _nivuus_safety_check() {
 _nivuus_preexec_safety() {
     local cmd="$1"
 
-    # Run safety check
+    # Run safety check (blocks until user responds)
+    # If user cancels, the function returns 1, but note that we cannot
+    # prevent command execution at this stage (preexec runs too late).
+    # User must press Ctrl+C during the confirmation prompt to truly cancel.
     _nivuus_safety_check "$cmd"
-    local result=$?
-
-    # If check failed, prevent command execution
-    if [[ $result -ne 0 ]]; then
-        # Kill the command by sending a fake interrupt
-        kill -INT $$
-    fi
 }
 
 # Register the hook

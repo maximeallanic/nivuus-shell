@@ -28,3 +28,11 @@ Thumbs.db
 # Testing
 test/
 .test/
+node_modules/
+.venv/
+tests/fixtures/git_repo/
+tests/fixtures/nodejs_project/
+tests/fixtures/python_project/
+tests/fixtures/.firebaserc
+coverage/
+.coverage

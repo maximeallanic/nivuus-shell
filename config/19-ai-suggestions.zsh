@@ -20,6 +20,7 @@ export NIVUUS_AI_SUGGESTIONS_LOADED=1
 typeset -g AI_SUGGESTION_MIN_CHARS="${AI_SUGGESTION_MIN_CHARS:-3}"
 typeset -g AI_DEBOUNCE_DELAY="${AI_DEBOUNCE_DELAY:-2}"  # Debounce delay in seconds
 typeset -g ENABLE_AI_AUTO_DEBOUNCE="${ENABLE_AI_AUTO_DEBOUNCE:-false}"  # Auto-trigger after typing
+typeset -g AI_SUGGESTION_MODEL="${AI_SUGGESTION_MODEL:-gemini-2.0-flash}"  # Model for suggestions
 
 # Cache
 typeset -gA _AI_CACHE
@@ -118,23 +119,9 @@ _ai_generate() {
     local prefix="$1"
     local cache_key="${prefix}_${PWD}"
 
-    # Find gemini at execution time (in case NVM loaded after module load)
-    local gemini_cmd
-    if command -v gemini &>/dev/null; then
-        gemini_cmd="$(command -v gemini)"
-    else
-        # Try common NVM paths
-        for nvm_path in ~/.nvm/versions/node/*/bin/gemini; do
-            if [[ -x "$nvm_path" ]]; then
-                gemini_cmd="$nvm_path"
-                break
-            fi
-        done
-    fi
-
-    # No gemini found
-    if [[ -z "$gemini_cmd" ]]; then
-        echo "ERROR: gemini not found" >&2
+    # Check for API key
+    if [[ -z "$GOOGLE_API_KEY" ]]; then
+        echo "ERROR: GOOGLE_API_KEY not set" >&2
         return 1
     fi
 
@@ -151,55 +138,26 @@ _ai_generate() {
     local num_suggestions=1
 
     local context=$(_ai_get_context)
-    local prompt="You are an expert shell command completion assistant with FULL context visibility. Analyze the rich context below and generate ${num_suggestions} highly relevant, executable command.
+    local prompt="Complete this shell command. Output ONLY the completed command, no explanation. Context: $context. Partial: $prefix"
 
-CRITICAL OUTPUT RULES - FOLLOW EXACTLY:
-- Output ONLY raw executable shell commands (bash/zsh)
-- ONE command per line
-- NO markdown code blocks (no \`\`\`), NO backticks, NO formatting
-- NO explanations, NO numbering, NO bullets, NO prefixes
-- NO text before or after commands
-- Each line must be a raw command that can be copy-pasted to terminal
-- Example correct output:
-  git status
-  ls -lah
-  cd /tmp
+    # Call Gemini API directly
+    local api_url="https://generativelanguage.googleapis.com/v1beta/models/${AI_SUGGESTION_MODEL}:generateContent?key=${GOOGLE_API_KEY}"
 
-CONTEXT ANALYSIS STRATEGY:
-You have access to extensive context - USE IT INTELLIGENTLY:
-- Files: ALL files in directory (reference specific files when relevant)
-- Git diff: See EXACT changes to suggest precise git commands
-- Project files: package.json scripts, dependencies, build configs
-- README: Project documentation and usage hints
-- Command history: Recent workflow patterns (last 20 commands)
-- Environment: Full PATH, user, shell environment
+    # Build JSON payload (escape quotes in prompt)
+    local escaped_prompt="${prompt//\"/\\\"}"
+    local json_payload="{\"contents\":[{\"parts\":[{\"text\":\"$escaped_prompt\"}]}],\"generationConfig\":{\"temperature\":0.3,\"maxOutputTokens\":30}}"
 
-SMART SUGGESTIONS:
-- For git commands: analyze the diff and status to suggest specific files/hunks
-- For project commands: use package.json scripts, Makefile targets, cargo commands
-- For file operations: reference actual files that exist
-- For history-based: continue the workflow pattern from recent commands
+    local api_response=$(timeout 5 curl -s -X POST "$api_url" \
+        -H 'Content-Type: application/json' \
+        -d "$json_payload" 2>/dev/null)
 
-FULL CONTEXT:
-$context
-
-User input to complete: $prefix
-
-Generate ${num_suggestions} most relevant commands:"
-
-    local result=$("$gemini_cmd" --model "${GEMINI_MODEL:-gemini-2.0-flash}" -o text "$prompt" 2>&1 | \
-        grep -v '^\[' | \
-        grep -v '^Loaded' | \
-        grep -v '^Cached' | \
-        grep -v '^```' | \
-        sed 's/^[0-9]*\.\s*//' | \
-        sed 's/^-\s*//' | \
-        sed 's/^[\*]\s*//' | \
+    # Extract and clean result
+    local result=$(echo "$api_response" | grep -o '"text"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | cut -d'"' -f4 | \
+        sed 's/\\n/ /g' | \
         sed 's/^`\(.*\)`$/\1/' | \
-        grep -v '^[[:space:]]*$' | \
-        grep -v -iE '^(explanation|example|correct|output|translate|generate|here|the|this|that|rules|commands|input):' | \
+        sed 's/^"\(.*\)"$/\1/' | \
         grep -E '^[a-zA-Z0-9_/\.\-\$\{\}]' | \
-        head -${num_suggestions})
+        head -1)
 
     if [[ -n "$result" ]]; then
         _AI_CACHE[$cache_key]="$result"
@@ -563,7 +521,12 @@ Configuration:
   AI_SUGGESTION_MIN_CHARS=3       # Minimum chars to trigger
   AI_DEBOUNCE_DELAY=2             # Debounce delay in seconds
   ENABLE_AI_AUTO_DEBOUNCE=false   # Auto-trigger after typing pause
-  GEMINI_MODEL=<model>            # Gemini model (default: gemini-2.0-flash)
+  AI_SUGGESTION_MODEL=gemini-2.0-flash  # Model for suggestions (default)
+
+Available models:
+  gemini-2.0-flash       # Latest, fastest, best balance (default)
+  gemini-1.5-pro         # More capable, slower
+  gemini-1.5-flash       # Previous generation
 
 Keybindings:
   Ctrl+↓     - Accept inline AI suggestion

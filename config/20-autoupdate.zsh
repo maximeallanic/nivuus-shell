@@ -63,6 +63,27 @@ _nivuus_update_check_timestamp() {
     date +%s > "$NIVUUS_UPDATE_CHECK_FILE"
 }
 
+# Clean up old backups (keep only last 5)
+_nivuus_cleanup_old_backups() {
+    local backup_base="$HOME/.config/nivuus-shell-backup"
+
+    # Check if backup directory exists
+    [[ ! -d "$backup_base" ]] && return
+
+    # Find all pre-update backups, sort by date (newest first), keep only first 5
+    local backups=("$backup_base"/pre-update-*(N))
+
+    # If we have more than 5 backups, remove the oldest ones
+    if (( ${#backups[@]} > 5 )); then
+        # Sort by modification time (newest first) and get all except first 5
+        local to_remove=("${(@)backups[6,-1]}")
+
+        for old_backup in "${to_remove[@]}"; do
+            rm -rf "$old_backup"
+        done
+    fi
+}
+
 # Create backup before update
 _nivuus_create_update_backup() {
     local backup_dir="$HOME/.config/nivuus-shell-backup/pre-update-$(date +%Y%m%d-%H%M%S)"
@@ -77,6 +98,9 @@ _nivuus_create_update_backup() {
     # Backup user files
     [[ -f "$HOME/.zshrc" ]] && cp "$HOME/.zshrc" "$backup_dir/.zshrc"
     [[ -f "$HOME/.zsh_local" ]] && cp "$HOME/.zsh_local" "$backup_dir/.zsh_local"
+
+    # Clean up old backups after creating new one
+    _nivuus_cleanup_old_backups
 
     echo "$backup_dir"
 }

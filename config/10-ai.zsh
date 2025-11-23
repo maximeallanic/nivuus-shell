@@ -40,6 +40,12 @@ AI Suggestions (Interactive):
   Delay:   Menu appears after 2s of inactivity
   Help:    ai_suggestions_help
 
+AI Terminal Titles:
+  Creative terminal titles powered by Gemini
+  Enable:  export ENABLE_AI_TERMINAL_TITLES=true
+  Stats:   ai-title-stats
+  Help:    ai-title-help
+
 Configuration:
   Model: ${GEMINI_MODEL:-gemini-2.0-flash}
   Status: $gemini_status

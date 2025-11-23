@@ -18,6 +18,21 @@ typeset -g _GIT_PROMPT_CACHE_TIME=0
 typeset -g _GIT_PROMPT_CACHE_VALUE=""
 
 # =============================================================================
+# Firebase Prompt Cache
+# =============================================================================
+
+typeset -g _FIREBASE_PROMPT_CACHE_DIR=""
+typeset -g _FIREBASE_PROMPT_CACHE_TIME=0
+typeset -g _FIREBASE_PROMPT_CACHE_VALUE=""
+
+# =============================================================================
+# Azure Cloud Context Cache
+# =============================================================================
+
+typeset -g _AZURE_PROMPT_CACHE_TIME=0
+typeset -g _AZURE_PROMPT_CACHE_VALUE=""
+
+# =============================================================================
 # Helper Functions
 # =============================================================================
 
@@ -81,6 +96,17 @@ git_prompt_info() {
 prompt_firebase() {
     [[ "${ENABLE_FIREBASE_PROMPT:-true}" != "true" ]] && return
 
+    local current_dir="$PWD"
+    local current_time="$EPOCHSECONDS"
+    local cache_ttl="${FIREBASE_PROMPT_CACHE_TTL:-10}"
+
+    # Use cache if valid and we're in the same directory
+    if [[ "$_FIREBASE_PROMPT_CACHE_DIR" == "$current_dir" ]] && \
+       (( current_time - _FIREBASE_PROMPT_CACHE_TIME < cache_ttl )); then
+        echo "$_FIREBASE_PROMPT_CACHE_VALUE"
+        return
+    fi
+
     # Check if we're in a Firebase project (look for .firebaserc or firebase.json)
     local dir="$PWD"
     local firebase_dir=""
@@ -94,8 +120,13 @@ prompt_firebase() {
         dir="${dir:h}"
     done
 
-    # If not in a Firebase project, return
-    [[ -z "$firebase_dir" ]] && return
+    # If not in a Firebase project, cache empty result and return
+    if [[ -z "$firebase_dir" ]]; then
+        _FIREBASE_PROMPT_CACHE_DIR="$current_dir"
+        _FIREBASE_PROMPT_CACHE_TIME="$current_time"
+        _FIREBASE_PROMPT_CACHE_VALUE=""
+        return
+    fi
 
     local project=""
 
@@ -126,8 +157,16 @@ prompt_firebase() {
         fi
     fi
 
-    # Firebase project in orange brackets
-    [[ -n "$project" ]] && echo " %{%F{208}%}[${project}]%{%f%}"
+    # Build Firebase prompt (or empty if no project)
+    local firebase_prompt=""
+    [[ -n "$project" ]] && firebase_prompt=" %{%F{208}%}[${project}]%{%f%}"
+
+    # Update cache
+    _FIREBASE_PROMPT_CACHE_DIR="$current_dir"
+    _FIREBASE_PROMPT_CACHE_TIME="$current_time"
+    _FIREBASE_PROMPT_CACHE_VALUE="$firebase_prompt"
+
+    echo "$firebase_prompt"
 }
 
 # =============================================================================
@@ -178,14 +217,26 @@ prompt_cloud_context() {
         cloud_info+="%{%F{110}%}gcp:${CLOUDSDK_CORE_PROJECT}%{%f%}"
     fi
 
-    # Azure Subscription
+    # Azure Subscription (with caching to avoid blocking prompt)
     if [[ -n "$AZURE_SUBSCRIPTION_ID" ]]; then
-        # Try to get subscription name from config
+        local current_time="$EPOCHSECONDS"
+        local cache_ttl="${AZURE_PROMPT_CACHE_TTL:-60}"
         local az_sub_name="$AZURE_SUBSCRIPTION_ID"
-        if command -v az &>/dev/null; then
+
+        # Use cache if valid
+        if (( current_time - _AZURE_PROMPT_CACHE_TIME < cache_ttl )) && [[ -n "$_AZURE_PROMPT_CACHE_VALUE" ]]; then
+            az_sub_name="$_AZURE_PROMPT_CACHE_VALUE"
+        elif command -v az &>/dev/null; then
+            # Try to get subscription name (with timeout protection)
             local az_name=$(az account show --query name -o tsv 2>/dev/null)
-            [[ -n "$az_name" ]] && az_sub_name="$az_name"
+            if [[ -n "$az_name" ]]; then
+                az_sub_name="$az_name"
+                # Update cache
+                _AZURE_PROMPT_CACHE_TIME="$current_time"
+                _AZURE_PROMPT_CACHE_VALUE="$az_name"
+            fi
         fi
+
         [[ -n "$cloud_info" ]] && cloud_info+=" "
         cloud_info+="%{%F{67}%}az:${az_sub_name}%{%f%}"
     fi
@@ -228,6 +279,13 @@ build_prompt() {
 # =============================================================================
 
 background_jobs_info() {
+    local output=""
+
+    # Error indicator (from 22-ai-errors.zsh if loaded)
+    if [[ "${ENABLE_AI_ERROR_INDICATOR:-true}" == "true" ]] && [[ "$_AI_ERROR_AVAILABLE" == "true" ]]; then
+        output+="%{%F{167}%}⚠%{%f%}"
+    fi
+
     # Use ZSH native job tracking (more reliable than jobs command)
     local running=0
     local stopped=0
@@ -257,34 +315,36 @@ background_jobs_info() {
     done
 
     local total=$((running + stopped))
-    [[ $total -eq 0 ]] && return
 
-    local output=""
+    # Add jobs info if there are any
+    if (( total > 0 )); then
+        [[ -n "$output" ]] && output+=" "
 
-    # If 2 jobs or less, show names
-    if (( total <= 2 )); then
-        if (( running > 0 )); then
-            local names="${(j: :)running_names}"
-            # Truncate if too long
-            [[ ${#names} -gt 20 ]] && names="${names:0:17}..."
-            output+="%{%F{143}%}▶ %{%f%}%{%F{246}%}${names}%{%f%}"
-        fi
+        # If 2 jobs or less, show names
+        if (( total <= 2 )); then
+            if (( running > 0 )); then
+                local names="${(j: :)running_names}"
+                # Truncate if too long
+                [[ ${#names} -gt 20 ]] && names="${names:0:17}..."
+                output+="%{%F{143}%}▶ %{%f%}%{%F{246}%}${names}%{%f%}"
+            fi
 
-        if (( stopped > 0 )); then
-            [[ -n "$output" ]] && output+=" "
-            local names="${(j: :)stopped_names}"
-            [[ ${#names} -gt 20 ]] && names="${names:0:17}..."
-            output+="%{%F{167}%}⏸ %{%f%}%{%F{246}%}${names}%{%f%}"
-        fi
-    else
-        # Show counts
-        if (( running > 0 )); then
-            output+="%{%F{143}%}▶ ${running}%{%f%}"
-        fi
+            if (( stopped > 0 )); then
+                [[ -n "$output" ]] && output+=" "
+                local names="${(j: :)stopped_names}"
+                [[ ${#names} -gt 20 ]] && names="${names:0:17}..."
+                output+="%{%F{167}%}⏸ %{%f%}%{%F{246}%}${names}%{%f%}"
+            fi
+        else
+            # Show counts
+            if (( running > 0 )); then
+                output+="%{%F{143}%}▶ ${running}%{%f%}"
+            fi
 
-        if (( stopped > 0 )); then
-            [[ -n "$output" ]] && output+=" "
-            output+="%{%F{167}%}⏸ ${stopped}%{%f%}"
+            if (( stopped > 0 )); then
+                [[ -n "$output" ]] && output+=" "
+                output+="%{%F{167}%}⏸ ${stopped}%{%f%}"
+            fi
         fi
     fi
 
