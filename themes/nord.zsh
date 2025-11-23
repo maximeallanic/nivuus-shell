@@ -6,8 +6,10 @@
 # https://www.nordtheme.com/
 # =============================================================================
 
-# Enable color support
-autoload -U colors && colors
+# Enable color support (if available)
+if (( $+commands[autoload] )) || typeset -f autoload >/dev/null 2>&1; then
+    autoload -U colors && colors
+fi
 
 # =============================================================================
 # Polar Night (Dark backgrounds/accents)

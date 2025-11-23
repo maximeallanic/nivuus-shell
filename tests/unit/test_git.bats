@@ -50,10 +50,11 @@ setup() {
     [[ "$output" == *"git commit -v"* ]]
 }
 
-@test "gcm alias is defined (git commit -m)" {
+@test "gcm alias is defined (git checkout main/master)" {
+    # Note: gcm is redefined in the config file, final definition is checkout main/master
     run zsh -c "source '$NIVUUS_SHELL_DIR/config/06-git.zsh' && alias gcm"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"git commit -m"* ]]
+    [[ "$output" == *"git checkout"* ]]
 }
 
 @test "gp alias is defined (git push)" {
