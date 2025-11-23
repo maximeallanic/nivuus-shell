@@ -14,14 +14,14 @@ for i in $(seq 1 $runs); do
 #!/usr/bin/env zsh
 zmodload zsh/datetime 2>/dev/null || true
 start=$EPOCHREALTIME
-[[ -n "$NIVUUS_SHELL_DIR" ]] && source "$NIVUUS_SHELL_DIR/.zshrc" 2>/dev/null
+[[ -n "$NIVUUS_SHELL_DIR" ]] && source "$NIVUUS_SHELL_DIR/.zshrc" >/dev/null 2>&1
 end=$EPOCHREALTIME
 # Output in microseconds (multiply by 1000000)
 printf "%.0f" $(( (end - start) * 1000000 ))
 SCRIPT
 
-    # Run and measure
-    result=$(NIVUUS_SHELL_DIR="$NIVUUS_SHELL_DIR" NIVUUS_NO_COMPILE=1 zsh "$temp" 2>/dev/null || echo "0")
+    # Run and measure (suppress all output except the final number)
+    result=$(NIVUUS_SHELL_DIR="$NIVUUS_SHELL_DIR" NIVUUS_NO_COMPILE=1 zsh "$temp" 2>&1 | tail -1 | grep -o '[0-9]*' || echo "0")
     rm -f "$temp"
 
     # Add to total (result is in microseconds)
