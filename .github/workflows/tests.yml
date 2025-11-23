@@ -53,9 +53,13 @@ jobs:
           output=$(bats tests/performance/test_startup.bats 2>&1)
           echo "$output"
 
-          # Check if startup test passed
+          # Check if startup test passed or was skipped (both are OK)
           if echo "$output" | grep -q "ok 1 CRITICAL"; then
-            echo "✅ Startup time requirement met (<300ms)"
+            if echo "$output" | grep -q "# skip"; then
+              echo "⏭️  Startup time test skipped in CI (use bin/benchmark locally)"
+            else
+              echo "✅ Startup time requirement met (<300ms)"
+            fi
           else
             echo "❌ Startup time requirement FAILED"
             exit 1
@@ -103,8 +107,8 @@ jobs:
           echo "- Performance tests: $perf_count" >> $GITHUB_STEP_SUMMARY
           echo "- **Total: $total tests**" >> $GITHUB_STEP_SUMMARY
 
-          # Extract startup time
-          startup_output=$(bats tests/performance/test_startup.bats 2>&1 | grep "Average startup time")
+          # Extract startup time (if not skipped in CI)
+          startup_output=$(bats tests/performance/test_startup.bats 2>&1 | grep "Average startup time" || true)
           if [ -n "$startup_output" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Performance ⚡" >> $GITHUB_STEP_SUMMARY
