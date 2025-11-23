@@ -13,7 +13,7 @@
 
     for i in $(seq 1 $runs); do
         start=$(date +%s%N)
-        zsh -i -c 'exit' 2>/dev/null
+        NIVUUS_SHELL_DIR="$NIVUUS_SHELL_DIR" zsh -i -c 'exit' 2>/dev/null
         end=$(date +%s%N)
         elapsed_ms=$(( (end - start) / 1000000 ))
         total_time=$(( total_time + elapsed_ms ))
