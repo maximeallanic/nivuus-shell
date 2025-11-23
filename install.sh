@@ -17,7 +17,7 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # Configuration
-VERSION="2.0.0"
+VERSION="3.0.0"
 REPO_URL="https://github.com/maximeallanic/nivuus-shell"
 GIT_REMOTE="git@github.com:maximeallanic/nivuus-shell.git"
 GIT_BRANCH="master"
