@@ -1,0 +1,241 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 2.1.0)'
+        required: true
+        type: string
+
+jobs:
+  # First, run all tests to ensure quality
+  test:
+    name: Run All Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh bats
+
+      - name: Setup test environment
+        run: |
+          echo "NIVUUS_SHELL_DIR=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+
+      - name: Run all tests
+        run: |
+          echo "Running smoke tests..."
+          bats tests/unit/test_smoke.bats
+
+          echo "Running unit tests..."
+          bats tests/unit/
+
+          echo "Running performance tests..."
+          bats tests/performance/
+
+      - name: Validate startup time requirement
+        run: |
+          output=$(bats tests/performance/test_startup.bats 2>&1)
+          echo "$output"
+
+          if echo "$output" | grep -q "ok 1 CRITICAL"; then
+            echo "✅ Startup time requirement met (<300ms)"
+          else
+            echo "❌ Startup time requirement FAILED"
+            exit 1
+          fi
+
+      - name: Validate ZSH syntax
+        run: |
+          echo "Validating all ZSH files..."
+          zsh -n .zshrc
+
+          for file in config/*.zsh themes/*.zsh; do
+            echo "  Checking $file..."
+            zsh -n "$file"
+          done
+
+          echo "✅ All ZSH files have valid syntax"
+
+  # Create the release if tests pass
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: test  # Only run if tests pass
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for changelog generation
+
+      - name: Validate version format
+        run: |
+          if ! echo "${{ inputs.version }}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ Invalid version format. Expected: X.Y.Z (e.g., 2.1.0)"
+            exit 1
+          fi
+          echo "✅ Version format valid: ${{ inputs.version }}"
+
+      - name: Check if tag already exists
+        run: |
+          if git rev-parse "v${{ inputs.version }}" >/dev/null 2>&1; then
+            echo "❌ Tag v${{ inputs.version }} already exists!"
+            exit 1
+          fi
+          echo "✅ Tag v${{ inputs.version }} is available"
+
+      - name: Update version in package.json
+        run: |
+          # Update package.json version
+          sed -i 's/"version": ".*"/"version": "${{ inputs.version }}"/' package.json
+
+          echo "✅ Updated package.json to version ${{ inputs.version }}"
+          grep '"version"' package.json
+
+      - name: Update version in install.sh
+        run: |
+          # Update install.sh VERSION variable
+          sed -i 's/^VERSION=.*/VERSION="${{ inputs.version }}"/' install.sh
+
+          echo "✅ Updated install.sh to version ${{ inputs.version }}"
+          grep '^VERSION=' install.sh
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous tag found, generating changelog from all commits..."
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            echo "Generating changelog from $PREVIOUS_TAG to HEAD..."
+            COMMITS=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+
+          # Create changelog content
+          cat > RELEASE_NOTES.md << EOF
+          ## What's Changed
+
+          $COMMITS
+
+          ## Installation
+
+          \`\`\`bash
+          curl -fsSL https://raw.githubusercontent.com/maximeallanic/nivuus-shell/v${{ inputs.version }}/install.sh | bash
+          \`\`\`
+
+          Or download the release archive and extract it manually.
+
+          ## Update
+
+          If you have Nivuus Shell already installed with auto-update enabled:
+
+          \`\`\`bash
+          nivuus-update
+          \`\`\`
+
+          **Full Changelog**: https://github.com/maximeallanic/nivuus-shell/compare/${PREVIOUS_TAG}...v${{ inputs.version }}
+          EOF
+
+          echo "✅ Generated changelog"
+          cat RELEASE_NOTES.md
+
+      - name: Create release archive
+        run: |
+          # Create a clean archive without .git directory
+          mkdir -p release-assets
+
+          # Create source archive
+          tar --exclude='.git' \
+              --exclude='release-assets' \
+              --exclude='*.zwc' \
+              --exclude='.github' \
+              -czf release-assets/nivuus-shell-v${{ inputs.version }}.tar.gz \
+              .
+
+          echo "✅ Created release archive"
+          ls -lh release-assets/
+
+      - name: Create documentation archive
+        run: |
+          # Bundle all documentation
+          mkdir -p release-assets/docs
+          cp -r doc/* release-assets/docs/ 2>/dev/null || true
+          cp README.md release-assets/docs/
+
+          # Create docs archive
+          cd release-assets
+          tar -czf nivuus-shell-docs-v${{ inputs.version }}.tar.gz docs/
+          rm -rf docs/
+
+          echo "✅ Created documentation archive"
+          ls -lh
+
+      - name: Generate checksums
+        run: |
+          cd release-assets
+          sha256sum *.tar.gz > SHA256SUMS
+
+          echo "✅ Generated checksums"
+          cat SHA256SUMS
+
+      - name: Commit version updates
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git add package.json install.sh
+          git commit -m "chore: bump version to ${{ inputs.version }}"
+
+          echo "✅ Committed version updates"
+
+      - name: Create and push tag
+        run: |
+          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+
+          echo "✅ Created and pushed tag v${{ inputs.version }}"
+
+      - name: Push version updates to master
+        run: |
+          git push origin HEAD:master
+          echo "✅ Pushed version updates to master"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ inputs.version }}" \
+            --title "Nivuus Shell v${{ inputs.version }}" \
+            --notes-file RELEASE_NOTES.md \
+            release-assets/*
+
+          echo "✅ Created GitHub Release v${{ inputs.version }}"
+
+      - name: Release Summary
+        run: |
+          echo "## 🎉 Release v${{ inputs.version }} Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Release Assets" >> $GITHUB_STEP_SUMMARY
+          echo "- Source archive (tar.gz)" >> $GITHUB_STEP_SUMMARY
+          echo "- Documentation archive" >> $GITHUB_STEP_SUMMARY
+          echo "- SHA256 checksums" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [View Release](https://github.com/maximeallanic/nivuus-shell/releases/tag/v${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Download Archive](https://github.com/maximeallanic/nivuus-shell/archive/refs/tags/v${{ inputs.version }}.tar.gz)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Verify the release on GitHub" >> $GITHUB_STEP_SUMMARY
+          echo "2. Test the auto-update mechanism" >> $GITHUB_STEP_SUMMARY
+          echo "3. Announce the release to users" >> $GITHUB_STEP_SUMMARY

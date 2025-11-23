@@ -2,9 +2,11 @@
 
 > A modern, fast, AI-powered ZSH shell with Nord theme and intelligent features
 
+![Version](https://img.shields.io/github/v/release/maximeallanic/nivuus-shell?label=version)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Shell](https://img.shields.io/badge/shell-ZSH-green.svg)
 ![Performance](https://img.shields.io/badge/startup-<100ms-brightgreen.svg)
+![Tests](https://github.com/maximeallanic/nivuus-shell/workflows/Tests/badge.svg)
 
 ## ✨ Features
 
@@ -213,6 +215,9 @@ healthcheck             # Complete system diagnostics
 benchmark               # Performance testing
 cleanup                 # Clean cache and temp files
 zsh_info                # Show shell configuration
+nivuus-version          # Show current version
+nivuus-version --check  # Check for updates
+nivuus-update           # Install latest update
 ```
 
 ## 🎨 Nord Theme
@@ -304,12 +309,21 @@ Automatic backups are created at:
 
 ## 🔄 Updating
 
-Nivuus Shell includes an automatic update system that checks for updates weekly and installs them automatically.
+Nivuus Shell includes an automatic update system that checks for new releases weekly and installs them automatically with checksum verification.
+
+### Check Current Version
+
+```bash
+nivuus-version              # Show current version
+nivuus-version --check      # Check for available updates
+```
 
 ### Automatic Updates
 
-- **Weekly checks** - Checks for updates every 7 days
-- **Automatic installation** - Updates are installed automatically with backup
+- **Weekly checks** - Checks for new releases every 7 days
+- **Release-based** - Updates from official GitHub Releases (stable versions only)
+- **Checksum verification** - SHA256 verification for security
+- **Automatic installation** - Updates installed automatically with backup
 - **Safe rollback** - Previous versions backed up to `~/.config/nivuus-shell-backup/`
 
 ### Manual Update
@@ -317,6 +331,14 @@ Nivuus Shell includes an automatic update system that checks for updates weekly 
 ```bash
 nivuus-update               # Check for and install updates manually
 ```
+
+The update system will:
+1. Check the latest release on GitHub
+2. Download the release archive
+3. Verify SHA256 checksum
+4. Create a backup of your current installation
+5. Install the new version
+6. Recompile ZSH files
 
 ### Configuration
 
@@ -329,11 +351,11 @@ export ENABLE_AUTOUPDATE=false
 # Change check frequency (days)
 export AUTOUPDATE_CHECK_FREQUENCY_DAYS=14
 
-# Change remote repository
-export NIVUUS_REMOTE_REPO=git@github.com:yourfork/nivuus-shell.git
+# Disable checksum verification (not recommended)
+export NIVUUS_VERIFY_CHECKSUMS=false
 
-# Change branch
-export NIVUUS_BRANCH=master
+# Use different GitHub repository
+export NIVUUS_GITHUB_REPO=yourfork/nivuus-shell
 ```
 
 ### Rollback
@@ -348,6 +370,15 @@ ls ~/.config/nivuus-shell-backup/
 cp -r ~/.config/nivuus-shell-backup/pre-update-YYYYMMDD-HHMMSS/nivuus-shell ~/.nivuus-shell
 exec zsh
 ```
+
+### Release Process
+
+Nivuus Shell uses semantic versioning (MAJOR.MINOR.PATCH):
+- **MAJOR** - Breaking changes
+- **MINOR** - New features (backward compatible)
+- **PATCH** - Bug fixes
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## 🔧 Development
 
@@ -373,10 +404,14 @@ exec zsh
 
 ```
 nivuus-shell/
-├── .zshrc                  # Main entry point
-├── .vimrc.nord             # Vim configuration with Nord theme
-├── install.sh              # Installation script
-├── config/                 # Modular configuration
+├── .github/
+│   └── workflows/
+│       ├── tests.yml      # CI/CD testing pipeline
+│       └── release.yml    # Release automation
+├── .zshrc                 # Main entry point
+├── .vimrc.nord            # Vim configuration with Nord theme
+├── install.sh             # Installation script
+├── config/                # Modular configuration
 │   ├── 00-core.zsh        # Core ZSH settings
 │   ├── 05-prompt.zsh      # Nord prompt
 │   ├── 06-git.zsh         # Git aliases
@@ -384,15 +419,18 @@ nivuus-shell/
 │   ├── 08-vim.zsh         # Vim integration
 │   ├── 09-nodejs.zsh      # Node.js/NVM
 │   ├── 10-ai.zsh          # AI commands
-│   ├── 20-autoupdate.zsh  # Auto-update system
+│   ├── 20-autoupdate.zsh  # Auto-update system (release-based)
 │   └── ...                # Other modules
 ├── themes/
 │   └── nord.zsh           # Nord color palette
 ├── bin/
 │   ├── healthcheck        # System diagnostics
 │   └── benchmark          # Performance testing
-├── FEATURES.md            # Complete feature list
-├── PROMPT.md              # Prompt documentation
+├── doc/
+│   ├── FEATURES.md        # Complete feature list
+│   ├── PROMPT.md          # Prompt documentation
+│   └── CLAUDE.md          # Developer guide
+├── CHANGELOG.md           # Release history
 └── README.md              # This file
 ```
 

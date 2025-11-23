@@ -7,19 +7,9 @@
 # =============================================================================
 
 @test "CRITICAL: Full shell startup time is under 300ms (average of 5 runs)" {
-    total_time=0
-    runs=5
+    # Use dedicated script to avoid bats overhead
+    average_ms=$("$BATS_TEST_DIRNAME/measure_startup.sh")
     max_ms=300
-
-    for i in $(seq 1 $runs); do
-        start=$(date +%s%N)
-        NIVUUS_SHELL_DIR="$NIVUUS_SHELL_DIR" zsh -i -c 'exit' 2>/dev/null
-        end=$(date +%s%N)
-        elapsed_ms=$(( (end - start) / 1000000 ))
-        total_time=$(( total_time + elapsed_ms ))
-    done
-
-    average_ms=$(( total_time / runs ))
 
     echo "# Average startup time: ${average_ms}ms (max: ${max_ms}ms)" >&3
 
