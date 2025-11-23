@@ -63,8 +63,8 @@ jobs:
 
       - name: Test count validation
         run: |
-          unit_count=$(bats tests/unit/ 2>&1 | head -1 | cut -d. -f2)
-          perf_count=$(bats tests/performance/ 2>&1 | head -1 | cut -d. -f2)
+          unit_count=$(bats tests/unit/ 2>&1 | head -1 | sed 's/1\.\.//')
+          perf_count=$(bats tests/performance/ 2>&1 | head -1 | sed 's/1\.\.//')
           total=$((unit_count + perf_count))
 
           echo "Unit tests: $unit_count"
@@ -93,8 +93,8 @@ jobs:
           fi
 
           # Count tests
-          unit_count=$(bats tests/unit/ 2>&1 | head -1 | cut -d. -f2)
-          perf_count=$(bats tests/performance/ 2>&1 | head -1 | cut -d. -f2)
+          unit_count=$(bats tests/unit/ 2>&1 | head -1 | sed 's/1\.\.//')
+          perf_count=$(bats tests/performance/ 2>&1 | head -1 | sed 's/1\.\.//')
           total=$((unit_count + perf_count))
 
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -173,7 +173,7 @@ jobs:
 
           for test_file in tests/unit/*.bats tests/performance/*.bats; do
             if [ -f "$test_file" ]; then
-              count=$(bats "$test_file" 2>&1 | head -1 | cut -d. -f2)
+              count=$(bats "$test_file" 2>&1 | head -1 | sed 's/1\.\.//')
               basename=$(basename "$test_file")
               echo "| $basename | $count |" >> coverage_report.md
             fi
