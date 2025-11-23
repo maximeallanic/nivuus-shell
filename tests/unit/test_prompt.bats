@@ -2,8 +2,9 @@
 
 # Unit tests for prompt module (config/05-prompt.zsh)
 
-setup() {
-    source "$NIVUUS_SHELL_DIR/themes/nord.zsh"
+# Helper to run zsh with correct NIVUUS_SHELL_DIR
+run_zsh() {
+    run zsh -c "export NIVUUS_SHELL_DIR='$NIVUUS_SHELL_DIR' && $1"
 }
 
 # =============================================================================
@@ -11,13 +12,13 @@ setup() {
 # =============================================================================
 
 @test "Prompt module loads without errors" {
-    run zsh -c "source '$NIVUUS_SHELL_DIR/themes/nord.zsh' && source '$NIVUUS_SHELL_DIR/config/05-prompt.zsh' && echo 'loaded'"
+    run zsh -c "export NIVUUS_SHELL_DIR='$NIVUUS_SHELL_DIR' && source '$NIVUUS_SHELL_DIR/themes/nord.zsh' && source '$NIVUUS_SHELL_DIR/config/05-prompt.zsh' && echo 'loaded'"
     [ "$status" -eq 0 ]
     [[ "$output" == *"loaded"* ]]
 }
 
 @test "PROMPT_SUBST is enabled" {
-    run zsh -c "source '$NIVUUS_SHELL_DIR/themes/nord.zsh' 2>/dev/null; source '$NIVUUS_SHELL_DIR/config/05-prompt.zsh' && setopt | grep PROMPT_SUBST"
+    run zsh -c "export NIVUUS_SHELL_DIR='$NIVUUS_SHELL_DIR' && source '$NIVUUS_SHELL_DIR/themes/nord.zsh' 2>/dev/null; source '$NIVUUS_SHELL_DIR/config/05-prompt.zsh' && setopt | grep -i promptsubst"
     [ "$status" -eq 0 ]
 }
 
@@ -60,7 +61,7 @@ setup() {
 }
 
 @test "git_prompt_info returns empty when not in git repo" {
-    run zsh -c "cd /tmp && source '$NIVUUS_SHELL_DIR/themes/nord.zsh' 2>/dev/null; source '$NIVUUS_SHELL_DIR/config/05-prompt.zsh' && git_prompt_info"
+    run zsh -c "cd /tmp && export NIVUUS_SHELL_DIR='$NIVUUS_SHELL_DIR' && source '$NIVUUS_SHELL_DIR/themes/nord.zsh' 2>/dev/null; source '$NIVUUS_SHELL_DIR/config/05-prompt.zsh' && git_prompt_info"
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }

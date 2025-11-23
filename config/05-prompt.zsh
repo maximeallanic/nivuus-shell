@@ -52,7 +52,7 @@ is_root() {
 
 git_prompt_info() {
     # Check if in a git repository
-    git rev-parse --git-dir &>/dev/null || return
+    git rev-parse --git-dir &>/dev/null || return 0
 
     local current_dir="$PWD"
     local current_time="$EPOCHSECONDS"

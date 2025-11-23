@@ -10,7 +10,7 @@
 # =============================================================================
 
 alias -- -='cd -'                  # Go to previous directory
-alias ~='cd ~'                     # Go to home directory
+# Note: Cannot alias '~' as it's a reserved zsh token
 
 # =============================================================================
 # Safety
