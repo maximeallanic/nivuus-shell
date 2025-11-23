@@ -413,8 +413,9 @@ nivuus-shell/
 
 ## 📚 Documentation
 
-- **[FEATURES.md](FEATURES.md)** - Complete feature guide
-- **[PROMPT.md](PROMPT.md)** - Prompt configuration details
+- **[FEATURES.md](doc/FEATURES.md)** - Complete feature guide
+- **[PROMPT.md](doc/PROMPT.md)** - Prompt configuration details
+- **[CLAUDE.md](doc/CLAUDE.md)** - Developer guide and architecture
 
 ## 🤝 Contributing
 

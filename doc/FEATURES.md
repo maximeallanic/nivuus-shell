@@ -18,7 +18,7 @@ Complete guide of what you can do with Nivuus Shell.
 
 ## AI-Powered Commands
 
-Get instant help and command suggestions powered by GitHub Copilot.
+Get instant help and command suggestions powered by Google Gemini AI.
 
 ### Quick Help
 ```bash
@@ -468,8 +468,8 @@ Install for all users on the system.
 
 ## What You Get
 
-✅ **Sub-500ms startup** - Lightning-fast shell
-✅ **AI command help** - GitHub Copilot integration
+✅ **Sub-100ms startup** - Lightning-fast shell
+✅ **AI command help** - Google Gemini AI integration
 ✅ **Modern vim** - Ctrl+C/V shortcuts everywhere
 ✅ **Smart history** - Type prefix then ↑/↓
 ✅ **Auto Node.js** - Version switching with `.nvmrc`
@@ -482,10 +482,9 @@ Install for all users on the system.
 
 ## Documentation
 
-- **[README.md](README.md)** - Getting started guide
-- **[API.md](API.md)** - Technical function reference
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history
+- **[README.md](../README.md)** - Getting started guide
+- **[CLAUDE.md](CLAUDE.md)** - Developer guide and architecture
+- **[PROMPT.md](PROMPT.md)** - Prompt configuration reference
 
 ---
 

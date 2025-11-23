@@ -444,8 +444,9 @@ print_completion() {
     echo ""
 
     echo "Documentation:"
-    echo "  • Features: FEATURES.md"
-    echo "  • Prompt: PROMPT.md"
+    echo "  • Features: doc/FEATURES.md"
+    echo "  • Prompt: doc/PROMPT.md"
+    echo "  • Developer guide: doc/CLAUDE.md"
     echo ""
 
     print_info "Enjoy your new shell! ✨"

@@ -281,6 +281,6 @@ Modify `config/05-prompt.zsh`:
 
 ## Documentation
 
-- **FEATURES.md**: User-facing feature documentation (note: mentions GitHub Copilot in legacy content, actual implementation uses gemini-cli)
-- **PROMPT.md**: Technical prompt architecture in French
-- **README.md**: User guide with installation, usage, troubleshooting
+- **[FEATURES.md](FEATURES.md)**: User-facing feature documentation
+- **[PROMPT.md](PROMPT.md)**: Technical prompt architecture in French
+- **[README.md](../README.md)**: User guide with installation, usage, troubleshooting
